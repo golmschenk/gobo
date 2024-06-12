@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Concatenate, ParamSpec, Any
 
 import numpy as np
 import numpy.typing as npt
@@ -6,6 +6,8 @@ from bokeh.core.enums import Place
 from bokeh.layouts import layout
 from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool
 from bokeh.plotting import figure, show
+
+P = ParamSpec('P')
 
 
 def create_marginal_1d_histogram_figure(marginal_1d_array: npt.NDArray) -> figure:
@@ -24,9 +26,14 @@ def create_marginal_2d_scatter_figure(marginal_2d_array0: npt.NDArray, marginal_
 def create_corner_plot(
         array: npt.NDArray,
         *,
-        marginal_1d_figure_function: Callable[[npt.NDArray], figure] = create_marginal_1d_histogram_figure,
-        marginal_2d_figure_function: Callable[[npt.NDArray, npt.NDArray], figure] = create_marginal_2d_scatter_figure,
+        marginal_1d_figure_function: Callable[
+            Concatenate[npt.NDArray, P], figure] = create_marginal_1d_histogram_figure,
+        marginal_2d_figure_function: Callable[
+            Concatenate[npt.NDArray, npt.NDArray, P], figure] = create_marginal_2d_scatter_figure,
+        sub_figure_kwargs: dict[Any, Any] = None
 ):
+    if sub_figure_kwargs is None:
+        sub_figure_kwargs = {}
     assert len(array.shape) == 2
 
     # Prepare shared components.
@@ -47,7 +54,7 @@ def create_corner_plot(
             # 1D marginal distribution figures.
             if row_index == column_index:
                 marginal_1d_array = array[:, row_index]
-                figure_ = marginal_1d_figure_function(marginal_1d_array)
+                figure_ = marginal_1d_figure_function(marginal_1d_array, **sub_figure_kwargs)
                 if len(figure_.left) > 0:
                     axis = figure_.left.pop(0)
                     figure_.add_layout(axis, Place.right)
@@ -60,7 +67,7 @@ def create_corner_plot(
             elif row_index > column_index:
                 marginal_2d_array0 = array[:, column_index]
                 marginal_2d_array1 = array[:, row_index]
-                figure_ = marginal_2d_figure_function(marginal_2d_array0, marginal_2d_array1)
+                figure_ = marginal_2d_figure_function(marginal_2d_array0, marginal_2d_array1, **sub_figure_kwargs)
                 figure_.min_border = subfigure_min_border
                 if column_index == 0:
                     figure_.min_border_left = end_axis_minimum_border
