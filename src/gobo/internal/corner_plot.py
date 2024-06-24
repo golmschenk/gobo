@@ -284,24 +284,20 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
         if len(figure_.left) > 0:
             axis = figure_.left.pop(0)
             figure_.add_layout(axis, Place.right)
-        figure_.xaxis.visible = False
-        figure_.yaxis.visible = True
         figure_.min_border = subfigure_min_border
         if column_index == 0:
             figure_.min_border_left = end_axis_minimum_border
-        if row_index == number_of_parameters - 1:
-            figure_.xaxis.visible = True
     if row_index > column_index:  # 2D marginal distribution figures.
         figure_.min_border = subfigure_min_border
         if column_index == 0:
             figure_.min_border_left = end_axis_minimum_border
         else:
             figure_.yaxis.visible = False
-        if row_index == number_of_parameters - 1:
-            figure_.min_border_bottom = end_axis_minimum_border
-        else:
-            figure_.xaxis.visible = False
         figure_.y_range = y_ranges[row_index]
+    if row_index == number_of_parameters - 1:
+        figure_.min_border_bottom = end_axis_minimum_border
+    else:
+        figure_.xaxis.visible = False
     if row_index == number_of_parameters - 1 and column_index == number_of_parameters - 1:
         figure_.toolbar_location = Place.below
     else:
