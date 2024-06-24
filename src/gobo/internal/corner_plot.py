@@ -3,36 +3,36 @@ from typing import Callable, Concatenate, ParamSpec, Any
 
 import numpy as np
 import numpy.typing as npt
-from bokeh.core.enums import Place, RenderLevel
+from bokeh.core.enums import Place
 from bokeh.layouts import layout
 from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Band, ColumnDataSource
-from bokeh.palettes import Sunset8, Blues8, Blues
+from bokeh.palettes import Blues
 from bokeh.plotting import figure, show
 from scipy import stats
 
 P = ParamSpec('P')
 
 
-def create_marginal_1d_histogram_figure(marginal_1d_array: npt.NDArray) -> figure:
+def create_histogram_figure(array: npt.NDArray) -> figure:
     figure_ = figure()
-    hist, edges = np.histogram(marginal_1d_array, density=True, bins=30)
+    hist, edges = np.histogram(array, density=True, bins=30)
     figure_.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], line_color="white")
     return figure_
 
 
-def create_marginal_2d_scatter_figure(marginal_2d_array0: npt.NDArray, marginal_2d_array1: npt.NDArray) -> figure:
+def create_scatter_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     figure_ = figure()
-    figure_.scatter(marginal_2d_array0, marginal_2d_array1, size=3, alpha=0.5)
+    figure_.scatter(array0, array1, size=3, alpha=0.5)
     return figure_
 
 
-def create_marginal_2d_contour_figure(marginal_2d_array0: npt.NDArray, marginal_2d_array1: npt.NDArray) -> figure:
+def create_2d_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     figure_ = figure()
-    combined_marginal_2d_array = np.stack([marginal_2d_array0, marginal_2d_array1], axis=0)
+    combined_marginal_2d_array = np.stack([array0, array1], axis=0)
 
     kde = stats.gaussian_kde(combined_marginal_2d_array)
-    contour_x_plotting_range = get_padded_range_for_array(marginal_2d_array0)
-    contour_y_plotting_range = get_padded_range_for_array(marginal_2d_array1)
+    contour_x_plotting_range = get_padded_range_for_array(array0)
+    contour_y_plotting_range = get_padded_range_for_array(array1)
 
     # Evaluate the KDE on a grid
     x_positions = np.linspace(*contour_x_plotting_range, 1000)
@@ -58,7 +58,7 @@ def create_marginal_2d_contour_figure(marginal_2d_array0: npt.NDArray, marginal_
     return figure_
 
 
-def create_marginal_1d_contour_figure(marginal_1d_array: npt.NDArray) -> figure:
+def create_1d_confidence_interval_figure(marginal_1d_array: npt.NDArray) -> figure:
     figure_ = figure()
 
     kde = stats.gaussian_kde(marginal_1d_array)
@@ -128,9 +128,9 @@ def create_corner_plot(
         array: npt.NDArray,
         *,
         marginal_1d_figure_function: Callable[
-            Concatenate[npt.NDArray, P], figure] = create_marginal_1d_histogram_figure,
+            Concatenate[npt.NDArray, P], figure] = create_histogram_figure,
         marginal_2d_figure_function: Callable[
-            Concatenate[npt.NDArray, npt.NDArray, P], figure] = create_marginal_2d_scatter_figure,
+            Concatenate[npt.NDArray, npt.NDArray, P], figure] = create_scatter_figure,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
@@ -218,5 +218,5 @@ if __name__ == '__main__':
                                           [[0.0, 1.0], [1.0, 0.0]],
                                           100)
     data_ = np.stack([np.random.normal(size=1000), np.random.normal(size=1000)], axis=1)
-    create_corner_plot(data_, marginal_2d_figure_function=create_marginal_2d_contour_figure,
-                       marginal_1d_figure_function=create_marginal_1d_contour_figure)
+    create_corner_plot(data_, marginal_2d_figure_function=create_2d_confidence_interval_figure,
+                       marginal_1d_figure_function=create_1d_confidence_interval_figure)
