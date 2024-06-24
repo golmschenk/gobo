@@ -111,8 +111,17 @@ def add_1d_confidence_interval_to_figure(
                                    method='inverted_cdf')
     plotting_position_threshold_indexes = np.searchsorted(plotting_positions, threshold_values)
     interval_segment_plotting_positions = np.split(plotting_positions, plotting_position_threshold_indexes)
-    # TODO: Include next value of array in split to make sure there are no gaps.
     interval_segment_values = np.split(distribution_values, plotting_position_threshold_indexes)
+    # Fill the gaps between intervals.
+    for split_index in range(len(interval_segment_plotting_positions) - 1):
+        interval_segment_plotting_positions[split_index] = np.append(
+            interval_segment_plotting_positions[split_index],
+            interval_segment_plotting_positions[split_index + 1][0]
+        )
+        interval_segment_values[split_index] = np.append(
+            interval_segment_values[split_index],
+            interval_segment_values[split_index + 1][0]
+        )
     alpha_interval = 1 / (len(confidence_interval_thresholds) + 1)
     for confidence_interval_threshold_index in range(len(confidence_interval_thresholds)):
         lower_segment_positions = interval_segment_plotting_positions[confidence_interval_threshold_index + 1]
@@ -252,7 +261,6 @@ def create_multi_distribution_corner_plot(
                 figure_ = marginal_1d_figure_function(marginal_1d_arrays, **sub_figure_kwargs)
             if row_index > column_index:  # 2D marginal distribution figures.
                 marginal_2d_array_pairs = [(array[:, column_index], array[:, row_index]) for array in arrays]
-                # TODO: The array pairs kinds of makes it inconsistent with two parameters in the single version.
                 figure_ = marginal_2d_figure_function(marginal_2d_array_pairs, **sub_figure_kwargs)
             if figure_ is not None:
                 compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
@@ -303,12 +311,6 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
 
 
 if __name__ == '__main__':
-    data_ = np.random.multivariate_normal([0, 0, 0, 1000],
-                                          [[1, 0.2, 1, 0.1], [0.2, 1, 1, 0.1], [1, 1, 1, 1], [1, 1, 1, 1]],
-                                          1000)
-    data_ = np.random.multivariate_normal([0, 0],
-                                          [[0.0, 1.0], [1.0, 0.0]],
-                                          100)
     data0 = np.stack([np.random.normal(size=1000), np.random.normal(size=1000)], axis=1)
     data1 = np.stack([np.random.normal(loc=1.5, size=1000), np.random.normal(loc=1.5, size=1000)], axis=1)
     create_multi_distribution_corner_plot([data0, data1],
