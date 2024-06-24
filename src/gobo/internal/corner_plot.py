@@ -1,12 +1,12 @@
 import math
-from typing import Callable, Concatenate, ParamSpec, Any
+from typing import Callable, Concatenate, ParamSpec, Any, Sequence, Mapping
 
 import numpy as np
 import numpy.typing as npt
 from bokeh.core.enums import Place
 from bokeh.layouts import layout
 from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Band, ColumnDataSource
-from bokeh.palettes import Blues
+from bokeh.palettes import Blues, Palette, Reds
 from bokeh.plotting import figure, show
 from scipy import stats
 
@@ -32,7 +32,13 @@ def create_2d_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArra
     return figure_
 
 
-def add_2d_confidence_interval_to_figure(figure_: figure, array0: npt.NDArray, array1: npt.NDArray):
+def add_2d_confidence_interval_to_figure(
+        figure_: figure,
+        array0: npt.NDArray,
+        array1: npt.NDArray,
+        *,
+        palette: Palette | dict[int, Palette] = Blues,
+):
     combined_marginal_2d_array = np.stack([array0, array1], axis=0)
     kde = stats.gaussian_kde(combined_marginal_2d_array)
     contour_x_plotting_range = get_padded_range_for_array(array0)
@@ -50,11 +56,12 @@ def add_2d_confidence_interval_to_figure(figure_: figure, array0: npt.NDArray, a
     threshold_indexes = np.searchsorted(cumulative_density, [0.6827, 0.9545, 0.9973])
     thresholds = sorted_z_meshgrid[threshold_indexes]
     thresholds = thresholds[::-1]
-    # thresholds = np.concat([np.array([np.min(sorted_z_meshgrid)]), thresholds, np.array([np.max(sorted_z_meshgrid)])])
     thresholds = np.concat([thresholds, np.array([np.max(sorted_z_meshgrid)])])
-    fill_palette = Blues[len(thresholds - 1)][::-1]
+    if isinstance(palette, dict):
+        palette = palette[len(thresholds - 1)]
+    palette = palette[::-1]
     contour_renderer = figure_.contour(x=x_meshgrid, y=y_meshgrid, z=z_meshgrid, levels=thresholds,
-                                       fill_color=fill_palette, fill_alpha=0.8)
+                                       fill_color=palette, fill_alpha=0.8)
 
 
 def create_1d_confidence_interval_figure(array: npt.NDArray) -> figure:
@@ -63,7 +70,30 @@ def create_1d_confidence_interval_figure(array: npt.NDArray) -> figure:
     return figure_
 
 
-def add_1d_confidence_interval_to_figure(figure_: figure, array: npt.NDArray):
+def create_multi_distribution_1d_confidence_interval_figure(arrays: list[npt.NDArray]) -> figure:
+    figure_ = figure()
+    palettes = [Blues, Reds]
+    for array, palette in zip(arrays, palettes):
+        add_1d_confidence_interval_to_figure(figure_, array, palette=palette)
+    return figure_
+
+
+def create_multi_distribution_2d_confidence_interval_figure(
+        array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
+    figure_ = figure()
+    # TODO: The palettes should just be the same color with decreasing alphas, not the changing brightness with constant alpha.
+    palettes = [Blues, Reds]
+    for array_pair, palette in zip(array_pairs, palettes):
+        add_2d_confidence_interval_to_figure(figure_, *array_pair, palette=palette)
+    return figure_
+
+
+def add_1d_confidence_interval_to_figure(
+        figure_: figure,
+        array: npt.NDArray,
+        *,
+        palette: Palette | dict[int, Palette] = Blues,
+):
     kde = stats.gaussian_kde(array)
     distribution_plotting_range = get_padded_range_for_array(array)
     # Evaluate the KDE on a grid
@@ -82,7 +112,8 @@ def add_1d_confidence_interval_to_figure(figure_: figure, array: npt.NDArray):
     interval_segment_plotting_positions = np.split(plotting_positions, plotting_position_threshold_indexes)
     # TODO: Include next value of array in split to make sure there are no gaps.
     interval_segment_values = np.split(distribution_values, plotting_position_threshold_indexes)
-    palette = Blues[len(confidence_interval_thresholds)]
+    if isinstance(palette, dict):
+        palette = palette[len(confidence_interval_thresholds)]
     for confidence_interval_threshold_index in range(len(confidence_interval_thresholds)):
         lower_segment_positions = interval_segment_plotting_positions[confidence_interval_threshold_index + 1]
         upper_segment_positions = interval_segment_plotting_positions[-(confidence_interval_threshold_index + 2)]
@@ -108,12 +139,13 @@ def add_1d_confidence_interval_to_figure(figure_: figure, array: npt.NDArray):
         math.floor(plotting_position_threshold_indexes.shape[0] / 2)]
     median_value = distribution_values[median_position_index]
     median_position = plotting_positions[median_position_index]
+    # TODO: This line needs the palette color.
     figure_.line(x=[median_position, median_position], y=[0, median_value])
     figure_.line(x=plotting_positions, y=distribution_values)
 
 
 def get_range_1d_for_array(array: npt.NDArray, padding_fraction: float = 0.05) -> Range1d:
-    range_end, range_start = get_padded_range_for_array(array, padding_fraction)
+    range_start, range_end = get_padded_range_for_array(array, padding_fraction)
     range_1d = Range1d(start=range_start, end=range_end)
     return range_1d
 
@@ -180,6 +212,62 @@ def create_corner_plot(
     show(layout_)
 
 
+def create_multi_distribution_corner_plot(
+        arrays: list[npt.NDArray],
+        *,
+        marginal_1d_figure_function: Callable[
+            Concatenate[list[npt.NDArray], P], figure] = create_histogram_figure,
+        marginal_2d_figure_function: Callable[
+            Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure] = create_scatter_figure,
+        subfigure_size: int = 200,
+        subfigure_min_border: int = 5,
+        end_axis_minimum_border: int = 100,
+        sub_figure_kwargs: dict[Any, Any] = None
+):
+    if sub_figure_kwargs is None:
+        sub_figure_kwargs = {}
+
+    number_of_parameters = arrays[0].shape[1]
+    for array in arrays:
+        assert len(array.shape) == 2
+        assert array.shape[1] == number_of_parameters
+
+    # Prepare shared components.
+    concatenated_array = np.concat(arrays, axis=0)
+    x_ranges = [get_range_1d_for_array(concatenated_array[:, index])
+                for index in range(number_of_parameters)]
+    y_ranges = [get_range_1d_for_array(concatenated_array[:, index])
+                for index in range(number_of_parameters)]
+    tools = [PanTool(), WheelZoomTool(), BoxZoomTool(), ResetTool()]
+    toolbar = Toolbar(tools=tools)
+
+    plots = []
+
+    for row_index in range(number_of_parameters):
+        row_figures: list[figure] = []
+        for column_index in range(number_of_parameters):
+            figure_ = None
+            if row_index == column_index:  # 1D marginal distribution figures.
+                marginal_1d_arrays = [array[:, row_index] for array in arrays]
+                figure_ = marginal_1d_figure_function(marginal_1d_arrays, **sub_figure_kwargs)
+            if row_index > column_index:  # 2D marginal distribution figures.
+                marginal_2d_array_pairs = [(array[:, column_index], array[:, row_index]) for array in arrays]
+                # TODO: The array pairs kinds of makes it inconsistent with two parameters in the single version.
+                figure_ = marginal_2d_figure_function(marginal_2d_array_pairs, **sub_figure_kwargs)
+            if figure_ is not None:
+                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
+                                                        x_ranges, y_ranges, toolbar, subfigure_size,
+                                                        subfigure_min_border, end_axis_minimum_border)
+                row_figures.append(figure_)
+        plots.append(row_figures)
+
+    # Create a grid plot
+    layout_ = layout(*plots)
+
+    # Display the plot
+    show(layout_)
+
+
 def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, row_index: int,
                                             number_of_parameters: int, x_ranges: list[Range1d], y_ranges: list[Range1d],
                                             toolbar: Toolbar, subfigure_size: int, subfigure_min_border: int,
@@ -221,6 +309,8 @@ if __name__ == '__main__':
     data_ = np.random.multivariate_normal([0, 0],
                                           [[0.0, 1.0], [1.0, 0.0]],
                                           100)
-    data_ = np.stack([np.random.normal(size=1000), np.random.normal(size=1000)], axis=1)
-    create_corner_plot(data_, marginal_2d_figure_function=create_2d_confidence_interval_figure,
-                       marginal_1d_figure_function=create_1d_confidence_interval_figure)
+    data0 = np.stack([np.random.normal(size=1000), np.random.normal(size=1000)], axis=1)
+    data1 = np.stack([np.random.normal(loc=1, size=1000), np.random.normal(loc=1, size=1000)], axis=1)
+    create_multi_distribution_corner_plot([data0, data1],
+                                          marginal_2d_figure_function=create_multi_distribution_2d_confidence_interval_figure,
+                                          marginal_1d_figure_function=create_multi_distribution_1d_confidence_interval_figure)
