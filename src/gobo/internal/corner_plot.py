@@ -28,22 +28,23 @@ def create_scatter_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
 
 def create_2d_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     figure_ = figure()
-    combined_marginal_2d_array = np.stack([array0, array1], axis=0)
+    add_2d_confidence_interval_to_figure(figure_, array0, array1)
+    return figure_
 
+
+def add_2d_confidence_interval_to_figure(figure_: figure, array0: npt.NDArray, array1: npt.NDArray):
+    combined_marginal_2d_array = np.stack([array0, array1], axis=0)
     kde = stats.gaussian_kde(combined_marginal_2d_array)
     contour_x_plotting_range = get_padded_range_for_array(array0)
     contour_y_plotting_range = get_padded_range_for_array(array1)
-
     # Evaluate the KDE on a grid
     x_positions = np.linspace(*contour_x_plotting_range, 1000)
     y_positions = np.linspace(*contour_y_plotting_range, 1000)
     x_meshgrid, y_meshgrid = np.meshgrid(x_positions, y_positions)
     positions = np.vstack([x_meshgrid.ravel(), y_meshgrid.ravel()])
     z_meshgrid = kde(positions).reshape(x_meshgrid.shape)
-
     # Sort the KDE values
     sorted_z_meshgrid = np.sort(z_meshgrid.ravel())[::-1]
-
     # Compute the cumulative density
     cumulative_density = np.cumsum(sorted_z_meshgrid) / np.sum(sorted_z_meshgrid)
     threshold_indexes = np.searchsorted(cumulative_density, [0.6827, 0.9545, 0.9973])
@@ -51,19 +52,20 @@ def create_2d_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArra
     thresholds = thresholds[::-1]
     # thresholds = np.concat([np.array([np.min(sorted_z_meshgrid)]), thresholds, np.array([np.max(sorted_z_meshgrid)])])
     thresholds = np.concat([thresholds, np.array([np.max(sorted_z_meshgrid)])])
-
     fill_palette = Blues[len(thresholds - 1)][::-1]
     contour_renderer = figure_.contour(x=x_meshgrid, y=y_meshgrid, z=z_meshgrid, levels=thresholds,
                                        fill_color=fill_palette, fill_alpha=0.8)
+
+
+def create_1d_confidence_interval_figure(array: npt.NDArray) -> figure:
+    figure_ = figure()
+    add_1d_confidence_interval_to_figure(figure_, array)
     return figure_
 
 
-def create_1d_confidence_interval_figure(marginal_1d_array: npt.NDArray) -> figure:
-    figure_ = figure()
-
-    kde = stats.gaussian_kde(marginal_1d_array)
-    distribution_plotting_range = get_padded_range_for_array(marginal_1d_array)
-
+def add_1d_confidence_interval_to_figure(figure_: figure, array: npt.NDArray):
+    kde = stats.gaussian_kde(array)
+    distribution_plotting_range = get_padded_range_for_array(array)
     # Evaluate the KDE on a grid
     plotting_positions = np.linspace(*distribution_plotting_range, 1000)
     distribution_values = kde(plotting_positions)
@@ -74,8 +76,8 @@ def create_1d_confidence_interval_figure(marginal_1d_array: npt.NDArray) -> figu
         np.array([0.5]),  # The median.
         0.5 + half_confidence_interval_thresholds,  # The upper bounds of the intervals.
     ])
-
-    threshold_values = np.quantile(plotting_positions, quantile_thresholds, weights=distribution_values, method='inverted_cdf')
+    threshold_values = np.quantile(plotting_positions, quantile_thresholds, weights=distribution_values,
+                                   method='inverted_cdf')
     plotting_position_threshold_indexes = np.searchsorted(plotting_positions, threshold_values)
     interval_segment_plotting_positions = np.split(plotting_positions, plotting_position_threshold_indexes)
     # TODO: Include next value of array in split to make sure there are no gaps.
@@ -96,16 +98,18 @@ def create_1d_confidence_interval_figure(marginal_1d_array: npt.NDArray) -> figu
             'lower': np.zeros_like(upper_segment_values),
             'upper': upper_segment_values,
         })
-        lower_band = Band(source=lower_column_data_source, base='base', lower='lower', upper='upper', fill_color=palette[-(confidence_interval_threshold_index + 1)], fill_alpha=0.8)
-        upper_band = Band(source=upper_column_data_source, base='base', lower='lower', upper='upper', fill_color=palette[-(confidence_interval_threshold_index + 1)], fill_alpha=0.8)
+        lower_band = Band(source=lower_column_data_source, base='base', lower='lower', upper='upper',
+                          fill_color=palette[-(confidence_interval_threshold_index + 1)], fill_alpha=0.8)
+        upper_band = Band(source=upper_column_data_source, base='base', lower='lower', upper='upper',
+                          fill_color=palette[-(confidence_interval_threshold_index + 1)], fill_alpha=0.8)
         figure_.add_layout(lower_band)
         figure_.add_layout(upper_band)
-    median_position_index = plotting_position_threshold_indexes[math.floor(plotting_position_threshold_indexes.shape[0]/2)]
+    median_position_index = plotting_position_threshold_indexes[
+        math.floor(plotting_position_threshold_indexes.shape[0] / 2)]
     median_value = distribution_values[median_position_index]
     median_position = plotting_positions[median_position_index]
     figure_.line(x=[median_position, median_position], y=[0, median_value])
     figure_.line(x=plotting_positions, y=distribution_values)
-    return figure_
 
 
 def get_range_1d_for_array(array: npt.NDArray, padding_fraction: float = 0.05) -> Range1d:
