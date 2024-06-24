@@ -289,6 +289,8 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
         figure_.min_border = subfigure_min_border
         if column_index == 0:
             figure_.min_border_left = end_axis_minimum_border
+        if row_index == number_of_parameters - 1:
+            figure_.xaxis.visible = True
     if row_index > column_index:  # 2D marginal distribution figures.
         figure_.min_border = subfigure_min_border
         if column_index == 0:
