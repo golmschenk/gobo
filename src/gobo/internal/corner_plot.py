@@ -1,6 +1,10 @@
+import logging
 import math
+import pickle
+from pathlib import Path
 from typing import Callable, Concatenate, ParamSpec, Any
 
+import haplo.data_preparation
 import numpy as np
 import numpy.typing as npt
 from bokeh.colors.named import mediumblue, firebrick, goldenrod, forestgreen
@@ -11,7 +15,10 @@ from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, 
 from bokeh.plotting import figure, show
 from scipy import stats
 
+
 P = ParamSpec('P')
+
+logger = logging.getLogger(__name__)
 
 
 def create_histogram_figure(array: npt.NDArray) -> figure:
@@ -27,13 +34,13 @@ def create_scatter_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     return figure_
 
 
-def create_2d_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
+def create_2d_kde_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     figure_ = figure()
-    add_2d_confidence_interval_to_figure(figure_, array0, array1)
+    add_2d_kde_confidence_interval_to_figure(figure_, array0, array1)
     return figure_
 
 
-def add_2d_confidence_interval_to_figure(
+def add_2d_kde_confidence_interval_to_figure(
         figure_: figure,
         array0: npt.NDArray,
         array1: npt.NDArray,
@@ -66,30 +73,30 @@ def add_2d_confidence_interval_to_figure(
                                        fill_color=color, fill_alpha=alphas)
 
 
-def create_1d_confidence_interval_figure(array: npt.NDArray) -> figure:
+def create_1d_kde_confidence_interval_figure(array: npt.NDArray) -> figure:
     figure_ = figure()
-    add_1d_confidence_interval_to_figure(figure_, array)
+    add_1d_kde_confidence_interval_to_figure(figure_, array)
     return figure_
 
 
-def create_multi_distribution_1d_confidence_interval_figure(arrays: list[npt.NDArray]) -> figure:
+def create_multi_distribution_1d_kde_confidence_interval_figure(arrays: list[npt.NDArray]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array, color in zip(arrays, colors):
-        add_1d_confidence_interval_to_figure(figure_, array, color=color)
+        add_1d_kde_confidence_interval_to_figure(figure_, array, color=color)
     return figure_
 
 
-def create_multi_distribution_2d_confidence_interval_figure(
+def create_multi_distribution_2d_kde_confidence_interval_figure(
         array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
-        add_2d_confidence_interval_to_figure(figure_, *array_pair, color=color)
+        add_2d_kde_confidence_interval_to_figure(figure_,,
     return figure_
 
 
-def add_1d_confidence_interval_to_figure(
+def add_1d_kde_confidence_interval_to_figure(
         figure_: figure,
         array: npt.NDArray,
         *,
@@ -202,10 +209,12 @@ def create_corner_plot(
             figure_ = None
             if row_index == column_index:  # 1D marginal distribution figures.
                 marginal_1d_array = array[:, row_index]
+                logger.info(f'Creating 1D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_1d_figure_function(marginal_1d_array, **sub_figure_kwargs)
             if row_index > column_index:  # 2D marginal distribution figures.
                 marginal_2d_array0 = array[:, column_index]
                 marginal_2d_array1 = array[:, row_index]
+                logger.info(f'Creating 2D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_2d_figure_function(marginal_2d_array0, marginal_2d_array1, **sub_figure_kwargs)
             if figure_ is not None:
                 compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
@@ -225,9 +234,10 @@ def create_multi_distribution_corner_plot(
         arrays: list[npt.NDArray],
         *,
         marginal_1d_figure_function: Callable[
-            Concatenate[list[npt.NDArray], P], figure] = create_histogram_figure,
+            Concatenate[list[npt.NDArray], P], figure] = create_multi_distribution_1d_kde_confidence_interval_figure,
         marginal_2d_figure_function: Callable[
-            Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure] = create_scatter_figure,
+            Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
+        ] = create_multi_distribution_2d_kde_confidence_interval_figure,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
@@ -258,9 +268,11 @@ def create_multi_distribution_corner_plot(
             figure_ = None
             if row_index == column_index:  # 1D marginal distribution figures.
                 marginal_1d_arrays = [array[:, row_index] for array in arrays]
+                logger.info(f'Creating 1D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_1d_figure_function(marginal_1d_arrays, **sub_figure_kwargs)
             if row_index > column_index:  # 2D marginal distribution figures.
                 marginal_2d_array_pairs = [(array[:, column_index], array[:, row_index]) for array in arrays]
+                logger.info(f'Creating 2D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_2d_figure_function(marginal_2d_array_pairs, **sub_figure_kwargs)
             if figure_ is not None:
                 compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
@@ -309,8 +321,20 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
 
 
 if __name__ == '__main__':
-    data0 = np.stack([np.random.normal(size=1000), np.random.normal(size=1000)], axis=1)
-    data1 = np.stack([np.random.normal(loc=1.5, size=1000), np.random.normal(loc=1.5, size=1000)], axis=1)
-    create_multi_distribution_corner_plot([data0, data1],
-                                          marginal_2d_figure_function=create_multi_distribution_2d_confidence_interval_figure,
-                                          marginal_1d_figure_function=create_multi_distribution_1d_confidence_interval_figure)
+    # data0 = np.stack([np.random.normal(size=1000), np.random.normal(size=1000)], axis=1)
+    # data1 = np.stack([np.random.normal(loc=1.5, size=1000), np.random.normal(loc=1.5, size=1000)], axis=1)
+    logger.setLevel(logging.INFO)
+    physical_model_data_path = Path('/Users/golmschenk/Downloads/mcmc_vac_all_f90_physical1_new_ref_no_cuts.pkl')
+    neural_network_data_path = Path('/Users/golmschenk/Downloads/mcmc_vac_all_f90_2024_05_17_16_05_30_1000_bs_001_lr_32'
+                                    '_node_2_gpu_44_cpu_1_pp_500m_third_cont_5_23.dat')
+    physical_model_data_frame = pickle.load(physical_model_data_path.open('rb'))
+    neural_network_data_frame = haplo.data_preparation.arbitrary_constantinos_kalapotharakos_file_handle_to_polars(
+        neural_network_data_path, columns_per_row=14)
+    physical_model_array = physical_model_data_frame.values[:, :11]
+    neural_network_array = neural_network_data_frame.to_pandas().values[:, :11]
+    end_state_index = min(physical_model_array.shape[0], neural_network_array.shape[0])
+    number_of_states_to_include = 10_000
+    start_state_index = end_state_index - number_of_states_to_include
+    physical_model_partial_array = physical_model_array[start_state_index:end_state_index]
+    neural_network_partial_array = neural_network_array[start_state_index:end_state_index]
+    create_multi_distribution_corner_plot([physical_model_partial_array, neural_network_partial_array])
