@@ -12,6 +12,7 @@ from bokeh.colors import Color
 from bokeh.core.enums import Place
 from bokeh.layouts import layout
 from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Band, ColumnDataSource
+from bokeh.palettes import varying_alpha_palette
 from bokeh.plotting import figure, show
 from scipy import stats
 
@@ -23,9 +24,13 @@ logger = logging.getLogger(__name__)
 
 def create_histogram_figure(array: npt.NDArray) -> figure:
     figure_ = figure()
+    add_1d_histogram_to_figure(figure_, array)
+    return figure_
+
+
+def add_1d_histogram_to_figure(figure_, array):
     hist, edges = np.histogram(array, density=True, bins=30)
     figure_.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], line_color="white")
-    return figure_
 
 
 def create_scatter_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
@@ -87,13 +92,55 @@ def create_multi_distribution_1d_kde_confidence_interval_figure(arrays: list[npt
     return figure_
 
 
+def create_multi_distribution_1d_histogram_confidence_interval_figure(arrays: list[npt.NDArray]) -> figure:
+    figure_ = figure()
+    colors = [mediumblue, firebrick]
+    for array, color in zip(arrays, colors):
+        add_1d_histogram_to_figure(figure_, array)
+    return figure_
+
+
 def create_multi_distribution_2d_kde_confidence_interval_figure(
         array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
-        add_2d_kde_confidence_interval_to_figure(figure_,,
+        add_2d_kde_confidence_interval_to_figure(figure_, *array_pair, color=color)
     return figure_
+
+
+def create_multi_distribution_2d_histogram_figure(
+        array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
+    figure_ = figure()
+    colors = [mediumblue, firebrick]
+    for array_pair, color in zip(array_pairs, colors):
+        add_2d_histogram_to_figure(figure_, *array_pair, color=color)
+    return figure_
+
+
+def add_2d_histogram_to_figure(
+        figure_: figure,
+        array0: npt.NDArray,
+        array1: npt.NDArray,
+        *,
+        color: Color = mediumblue,
+):
+    # Compute the 2D histogram
+    histogram_values, histogram_edges0, histogram_edges1 = np.histogram2d(array0, array1, bins=30, density=True)
+
+    # Normalize the histogram to [0, 1] for alpha values
+    hist_max = np.max(histogram_values)
+    hist_normalized = histogram_values / hist_max
+    histogram_meshgrid = np.meshgrid(histogram_edges0[-1:], histogram_edges1[-1])
+    image_width = histogram_edges0[-1] - histogram_edges0[0]
+    image_height = histogram_edges1[-1] - histogram_edges1[0]
+    image_anchor0 = histogram_edges0[0]
+    image_anchor1 = histogram_edges1[0]
+
+    palette = varying_alpha_palette(color.to_rgb().to_hex())
+
+    figure_.image(image=[hist_normalized], x=image_anchor0, y=image_anchor1, dw=image_width, dh=image_height,
+                  palette=palette)
 
 
 def add_1d_kde_confidence_interval_to_figure(
@@ -234,10 +281,10 @@ def create_multi_distribution_corner_plot(
         arrays: list[npt.NDArray],
         *,
         marginal_1d_figure_function: Callable[
-            Concatenate[list[npt.NDArray], P], figure] = create_multi_distribution_1d_kde_confidence_interval_figure,
+            Concatenate[list[npt.NDArray], P], figure] = create_multi_distribution_1d_histogram_confidence_interval_figure,
         marginal_2d_figure_function: Callable[
             Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
-        ] = create_multi_distribution_2d_kde_confidence_interval_figure,
+        ] = create_multi_distribution_2d_histogram_figure,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
@@ -333,7 +380,7 @@ if __name__ == '__main__':
     physical_model_array = physical_model_data_frame.values[:, :11]
     neural_network_array = neural_network_data_frame.to_pandas().values[:, :11]
     end_state_index = min(physical_model_array.shape[0], neural_network_array.shape[0])
-    number_of_states_to_include = 10_000
+    number_of_states_to_include = 100_000
     start_state_index = end_state_index - number_of_states_to_include
     physical_model_partial_array = physical_model_array[start_state_index:end_state_index]
     neural_network_partial_array = neural_network_array[start_state_index:end_state_index]
