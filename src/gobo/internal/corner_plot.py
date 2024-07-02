@@ -16,6 +16,7 @@ from bokeh.palettes import varying_alpha_palette
 from bokeh.plotting import figure, show
 from scipy import stats
 
+from gobo.internal.logging import set_up_default_logger
 
 P = ParamSpec('P')
 
@@ -35,8 +36,16 @@ def add_1d_histogram_to_figure(figure_, array):
 
 def create_scatter_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     figure_ = figure()
-    figure_.scatter(array0, array1, size=3, alpha=0.5)
+    add_2d_scatter_to_figure(figure_, array0, array1, )
     return figure_
+
+
+def add_2d_scatter_to_figure(figure_,
+                             array0,
+                             array1,
+                             *,
+                             color: Color = mediumblue, ):
+    figure_.scatter(array0, array1, size=3, alpha=0.5, color=color)
 
 
 def create_2d_kde_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
@@ -125,22 +134,16 @@ def add_2d_histogram_to_figure(
         *,
         color: Color = mediumblue,
 ):
-    # Compute the 2D histogram
     histogram_values, histogram_edges0, histogram_edges1 = np.histogram2d(array0, array1, bins=30, density=True)
-
-    # Normalize the histogram to [0, 1] for alpha values
-    hist_max = np.max(histogram_values)
-    hist_normalized = histogram_values / hist_max
-    histogram_meshgrid = np.meshgrid(histogram_edges0[-1:], histogram_edges1[-1])
+    histogram_maximum = np.max(histogram_values)
+    histogram_normalized = histogram_values / histogram_maximum
     image_width = histogram_edges0[-1] - histogram_edges0[0]
     image_height = histogram_edges1[-1] - histogram_edges1[0]
     image_anchor0 = histogram_edges0[0]
     image_anchor1 = histogram_edges1[0]
-
     palette = varying_alpha_palette(color.to_rgb().to_hex())
-
-    figure_.image(image=[hist_normalized], x=image_anchor0, y=image_anchor1, dw=image_width, dh=image_height,
-                  palette=palette)
+    figure_.image(image=[np.transpose(histogram_normalized)], x=image_anchor0, y=image_anchor1, dw=image_width,
+                  dh=image_height, palette=palette)
 
 
 def add_1d_kde_confidence_interval_to_figure(
@@ -281,7 +284,8 @@ def create_multi_distribution_corner_plot(
         arrays: list[npt.NDArray],
         *,
         marginal_1d_figure_function: Callable[
-            Concatenate[list[npt.NDArray], P], figure] = create_multi_distribution_1d_histogram_confidence_interval_figure,
+            Concatenate[
+                list[npt.NDArray], P], figure] = create_multi_distribution_1d_histogram_confidence_interval_figure,
         marginal_2d_figure_function: Callable[
             Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
         ] = create_multi_distribution_2d_histogram_figure,
@@ -365,23 +369,3 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
     figure_.frame_height = subfigure_size
     figure_.x_range = x_ranges[column_index]
     figure_.toolbar = toolbar
-
-
-if __name__ == '__main__':
-    # data0 = np.stack([np.random.normal(size=1000), np.random.normal(size=1000)], axis=1)
-    # data1 = np.stack([np.random.normal(loc=1.5, size=1000), np.random.normal(loc=1.5, size=1000)], axis=1)
-    logger.setLevel(logging.INFO)
-    physical_model_data_path = Path('/Users/golmschenk/Downloads/mcmc_vac_all_f90_physical1_new_ref_no_cuts.pkl')
-    neural_network_data_path = Path('/Users/golmschenk/Downloads/mcmc_vac_all_f90_2024_05_17_16_05_30_1000_bs_001_lr_32'
-                                    '_node_2_gpu_44_cpu_1_pp_500m_third_cont_5_23.dat')
-    physical_model_data_frame = pickle.load(physical_model_data_path.open('rb'))
-    neural_network_data_frame = haplo.data_preparation.arbitrary_constantinos_kalapotharakos_file_handle_to_polars(
-        neural_network_data_path, columns_per_row=14)
-    physical_model_array = physical_model_data_frame.values[:, :11]
-    neural_network_array = neural_network_data_frame.to_pandas().values[:, :11]
-    end_state_index = min(physical_model_array.shape[0], neural_network_array.shape[0])
-    number_of_states_to_include = 100_000
-    start_state_index = end_state_index - number_of_states_to_include
-    physical_model_partial_array = physical_model_array[start_state_index:end_state_index]
-    neural_network_partial_array = neural_network_array[start_state_index:end_state_index]
-    create_multi_distribution_corner_plot([physical_model_partial_array, neural_network_partial_array])
