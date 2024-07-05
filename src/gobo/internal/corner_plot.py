@@ -1,22 +1,17 @@
 import logging
 import math
-import pickle
-from pathlib import Path
 from typing import Callable, Concatenate, ParamSpec, Any
 
-import haplo.data_preparation
 import numpy as np
 import numpy.typing as npt
-from bokeh.colors.named import mediumblue, firebrick, goldenrod, forestgreen
 from bokeh.colors import Color
+from bokeh.colors.named import mediumblue, firebrick
 from bokeh.core.enums import Place
 from bokeh.layouts import layout
 from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Band, ColumnDataSource
 from bokeh.palettes import varying_alpha_palette
 from bokeh.plotting import figure, show
 from scipy import stats
-
-from gobo.internal.logging import set_up_default_logger
 
 P = ParamSpec('P')
 
@@ -65,26 +60,28 @@ def add_2d_kde_confidence_interval_to_figure(
     kde = stats.gaussian_kde(combined_marginal_2d_array)
     contour_x_plotting_range = get_padded_range_for_array(array0)
     contour_y_plotting_range = get_padded_range_for_array(array1)
-    # Evaluate the KDE on a grid
     x_positions = np.linspace(*contour_x_plotting_range, 1000)
     y_positions = np.linspace(*contour_y_plotting_range, 1000)
     x_meshgrid, y_meshgrid = np.meshgrid(x_positions, y_positions)
     positions = np.vstack([x_meshgrid.ravel(), y_meshgrid.ravel()])
     z_meshgrid = kde(positions).reshape(x_meshgrid.shape)
-    # Sort the KDE values
-    sorted_z_meshgrid = np.sort(z_meshgrid.ravel())[::-1]
-    # Compute the cumulative density
-    cumulative_density = np.cumsum(sorted_z_meshgrid) / np.sum(sorted_z_meshgrid)
+    add_contour_to_figure(figure_, x_meshgrid, y_meshgrid, z_meshgrid, color)
+
+
+def add_contour_to_figure(figure_, x_meshgrid, y_meshgrid, z_meshgrid, color):
+    z = z_meshgrid.ravel()
+    sorted_z = np.sort(z)[::-1]
+    cumulative_density = np.cumsum(sorted_z) / np.sum(sorted_z)
     confidence_intervals = [0.6827, 0.9545, 0.9973]
     threshold_indexes = np.searchsorted(cumulative_density, confidence_intervals)
-    thresholds = sorted_z_meshgrid[threshold_indexes]
+    thresholds = sorted_z[threshold_indexes]
     thresholds = thresholds[::-1]
-    thresholds = np.concat([thresholds, np.array([np.max(sorted_z_meshgrid)])])
+    thresholds = np.concat([thresholds, np.array([np.max(sorted_z)])])
     alpha_interval = 1 / (len(threshold_indexes) + 1)
     alphas = [alpha_interval * (confidence_interval_index + 1)
               for confidence_interval_index in range(len(confidence_intervals))]
-    contour_renderer = figure_.contour(x=x_meshgrid, y=y_meshgrid, z=z_meshgrid, levels=thresholds,
-                                       fill_color=color, fill_alpha=alphas)
+    figure_.contour(x=x_meshgrid, y=y_meshgrid, z=z_meshgrid, levels=thresholds,
+                    fill_color=color, fill_alpha=alphas)
 
 
 def create_1d_kde_confidence_interval_figure(array: npt.NDArray) -> figure:
@@ -127,6 +124,15 @@ def create_multi_distribution_2d_histogram_figure(
     return figure_
 
 
+def create_2d_histogram_confidence_interval_contour_figure(
+        array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
+    figure_ = figure()
+    colors = [mediumblue, firebrick]
+    for array_pair, color in zip(array_pairs, colors):
+        add_2d_histogram_confidence_interval_contour_to_figure(figure_, *array_pair, color=color)
+    return figure_
+
+
 def add_2d_histogram_to_figure(
         figure_: figure,
         array0: npt.NDArray,
@@ -144,6 +150,21 @@ def add_2d_histogram_to_figure(
     palette = varying_alpha_palette(color.to_rgb().to_hex())
     figure_.image(image=[np.transpose(histogram_normalized)], x=image_anchor0, y=image_anchor1, dw=image_width,
                   dh=image_height, palette=palette)
+
+
+def add_2d_histogram_confidence_interval_contour_to_figure(
+        figure_: figure,
+        array0: npt.NDArray,
+        array1: npt.NDArray,
+        *,
+        color: Color = mediumblue,
+):
+    histogram_values, histogram_edges0, histogram_edges1 = np.histogram2d(array0, array1, bins=[30, 40], density=True)
+    histogram_centers0 = (histogram_edges0[1:] + histogram_edges0[:-1]) / 2
+    histogram_centers1 = (histogram_edges1[1:] + histogram_edges1[:-1]) / 2
+    x_meshgrid, y_meshgrid = np.meshgrid(histogram_centers0, histogram_centers1)
+    z_meshgrid = np.transpose(histogram_values)
+    add_contour_to_figure(figure_, x_meshgrid, y_meshgrid, z_meshgrid, color)
 
 
 def add_1d_kde_confidence_interval_to_figure(
@@ -288,7 +309,7 @@ def create_multi_distribution_corner_plot(
                 list[npt.NDArray], P], figure] = create_multi_distribution_1d_histogram_confidence_interval_figure,
         marginal_2d_figure_function: Callable[
             Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
-        ] = create_multi_distribution_2d_histogram_figure,
+        ] = create_2d_histogram_confidence_interval_contour_figure,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
