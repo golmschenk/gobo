@@ -98,11 +98,17 @@ def create_multi_distribution_1d_kde_confidence_interval_figure(arrays: list[npt
     return figure_
 
 
+def add_1d_histogram_confidence_interval_to_figure(figure_: figure, array: npt.NDArray, color: Color):
+    histogram_values, histogram_edges = np.histogram(array, bins=60, density=True)
+    histogram_centers = (histogram_edges[1:] + histogram_edges[:-1]) / 2
+    add_1d_confidence_interval_contour_to_figure(figure_, histogram_centers, histogram_values, color)
+
+
 def create_multi_distribution_1d_histogram_confidence_interval_figure(arrays: list[npt.NDArray]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array, color in zip(arrays, colors):
-        add_1d_histogram_to_figure(figure_, array)
+        add_1d_histogram_confidence_interval_to_figure(figure_, array, color)
     return figure_
 
 
@@ -178,6 +184,10 @@ def add_1d_kde_confidence_interval_to_figure(
     # Evaluate the KDE on a grid
     plotting_positions = np.linspace(*distribution_plotting_range, 1000)
     distribution_values = kde(plotting_positions)
+    add_1d_confidence_interval_contour_to_figure(figure_, plotting_positions, distribution_values, color)
+
+
+def add_1d_confidence_interval_contour_to_figure(figure_, distribution_positions, distribution_values, color):
     confidence_interval_thresholds = np.array([0.6827, 0.9545, 0.9973])
     half_confidence_interval_thresholds = confidence_interval_thresholds / 2
     quantile_thresholds = np.concat([
@@ -185,10 +195,10 @@ def add_1d_kde_confidence_interval_to_figure(
         np.array([0.5]),  # The median.
         0.5 + half_confidence_interval_thresholds,  # The upper bounds of the intervals.
     ])
-    threshold_values = np.quantile(plotting_positions, quantile_thresholds, weights=distribution_values,
+    threshold_values = np.quantile(distribution_positions, quantile_thresholds, weights=distribution_values,
                                    method='inverted_cdf')
-    plotting_position_threshold_indexes = np.searchsorted(plotting_positions, threshold_values)
-    interval_segment_plotting_positions = np.split(plotting_positions, plotting_position_threshold_indexes)
+    plotting_position_threshold_indexes = np.searchsorted(distribution_positions, threshold_values)
+    interval_segment_plotting_positions = np.split(distribution_positions, plotting_position_threshold_indexes)
     interval_segment_values = np.split(distribution_values, plotting_position_threshold_indexes)
     # Fill the gaps between intervals.
     for split_index in range(len(interval_segment_plotting_positions) - 1):
@@ -226,9 +236,9 @@ def add_1d_kde_confidence_interval_to_figure(
     median_position_index = plotting_position_threshold_indexes[
         math.floor(plotting_position_threshold_indexes.shape[0] / 2)]
     median_value = distribution_values[median_position_index]
-    median_position = plotting_positions[median_position_index]
+    median_position = distribution_positions[median_position_index]
     figure_.line(x=[median_position, median_position], y=[0, median_value], color=color)
-    figure_.line(x=plotting_positions, y=distribution_values, color=color)
+    figure_.line(x=distribution_positions, y=distribution_values, color=color)
 
 
 def get_range_1d_for_array(array: npt.NDArray, padding_fraction: float = 0.05) -> Range1d:
