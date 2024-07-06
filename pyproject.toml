@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.9"
 dependencies = [
     "bokeh>=3.0.0",
-    "numpy>=1.24.1",
+    "numpy>=2.0.0",
     "scipy>=1.10.0",
     "polars>=0.19.10",
     "pandas>=1.5.3",
