@@ -76,7 +76,7 @@ def add_contour_to_figure(figure_, x_meshgrid, y_meshgrid, z_meshgrid, color):
     threshold_indexes = np.searchsorted(cumulative_density, confidence_intervals)
     thresholds = sorted_z[threshold_indexes]
     thresholds = thresholds[::-1]
-    thresholds = np.concat([thresholds, np.array([np.max(sorted_z)])])
+    thresholds = np.concatenate([thresholds, np.array([np.max(sorted_z)])])
     alpha_interval = 1 / (len(threshold_indexes) + 1)
     alphas = [alpha_interval * (confidence_interval_index + 1)
               for confidence_interval_index in range(len(confidence_intervals))]
@@ -190,7 +190,7 @@ def add_1d_kde_confidence_interval_to_figure(
 def add_1d_confidence_interval_contour_to_figure(figure_, distribution_positions, distribution_values, color):
     confidence_interval_thresholds = np.array([0.6827, 0.9545, 0.9973])
     half_confidence_interval_thresholds = confidence_interval_thresholds / 2
-    quantile_thresholds = np.concat([
+    quantile_thresholds = np.concatenate([
         0.5 - half_confidence_interval_thresholds[::-1],  # The lower bounds of the intervals.
         np.array([0.5]),  # The median.
         0.5 + half_confidence_interval_thresholds,  # The upper bounds of the intervals.
@@ -334,7 +334,7 @@ def create_multi_distribution_corner_plot(
         assert array.shape[1] == number_of_parameters
 
     # Prepare shared components.
-    concatenated_array = np.concat(arrays, axis=0)
+    concatenated_array = np.concatenate(arrays, axis=0)
     x_ranges = [get_range_1d_for_array(concatenated_array[:, index])
                 for index in range(number_of_parameters)]
     y_ranges = [get_range_1d_for_array(concatenated_array[:, index])
