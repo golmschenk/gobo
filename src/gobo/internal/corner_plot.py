@@ -8,7 +8,8 @@ from bokeh.colors import Color
 from bokeh.colors.named import mediumblue, firebrick
 from bokeh.core.enums import Place
 from bokeh.layouts import layout
-from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Band, ColumnDataSource
+from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Band, ColumnDataSource, \
+    Column
 from bokeh.palettes import varying_alpha_palette
 from bokeh.plotting import figure, show
 from scipy import stats
@@ -324,7 +325,7 @@ def create_multi_distribution_corner_plot(
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
         sub_figure_kwargs: dict[Any, Any] = None
-):
+) -> Column:
     if sub_figure_kwargs is None:
         sub_figure_kwargs = {}
 
@@ -366,8 +367,7 @@ def create_multi_distribution_corner_plot(
     # Create a grid plot
     layout_ = layout(*plots)
 
-    # Display the plot
-    show(layout_)
+    return layout_
 
 
 def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, row_index: int,
