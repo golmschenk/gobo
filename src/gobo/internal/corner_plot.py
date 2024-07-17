@@ -265,6 +265,7 @@ def create_corner_plot(
             Concatenate[npt.NDArray, P], figure] = create_histogram_figure,
         marginal_2d_figure_function: Callable[
             Concatenate[npt.NDArray, npt.NDArray, P], figure] = create_scatter_figure,
+        labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
@@ -300,7 +301,7 @@ def create_corner_plot(
                 figure_ = marginal_2d_figure_function(marginal_2d_array0, marginal_2d_array1, **sub_figure_kwargs)
             if figure_ is not None:
                 compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
-                                                        x_ranges, y_ranges, toolbar, subfigure_size,
+                                                        labels, x_ranges, y_ranges, toolbar, subfigure_size,
                                                         subfigure_min_border, end_axis_minimum_border)
                 row_figures.append(figure_)
         plots.append(row_figures)
@@ -321,6 +322,7 @@ def create_multi_distribution_corner_plot(
         marginal_2d_figure_function: Callable[
             Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
         ] = create_2d_histogram_confidence_interval_contour_figure,
+        labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
@@ -329,25 +331,28 @@ def create_multi_distribution_corner_plot(
     if sub_figure_kwargs is None:
         sub_figure_kwargs = {}
 
-    number_of_parameters = arrays[0].shape[1]
+    number_of_dimensions = arrays[0].shape[1]
     for array in arrays:
         assert len(array.shape) == 2
-        assert array.shape[1] == number_of_parameters
+        assert array.shape[1] == number_of_dimensions
+
+    if labels is not None and len(labels) != number_of_dimensions:
+        raise ValueError('`labels` must be the same length as the number of dimensions.')
 
     # Prepare shared components.
     concatenated_array = np.concatenate(arrays, axis=0)
     x_ranges = [get_range_1d_for_array(concatenated_array[:, index])
-                for index in range(number_of_parameters)]
+                for index in range(number_of_dimensions)]
     y_ranges = [get_range_1d_for_array(concatenated_array[:, index])
-                for index in range(number_of_parameters)]
+                for index in range(number_of_dimensions)]
     tools = [PanTool(), WheelZoomTool(), BoxZoomTool(), ResetTool()]
     toolbar = Toolbar(tools=tools)
 
     plots = []
 
-    for row_index in range(number_of_parameters):
+    for row_index in range(number_of_dimensions):
         row_figures: list[figure] = []
-        for column_index in range(number_of_parameters):
+        for column_index in range(number_of_dimensions):
             figure_ = None
             if row_index == column_index:  # 1D marginal distribution figures.
                 marginal_1d_arrays = [array[:, row_index] for array in arrays]
@@ -358,7 +363,7 @@ def create_multi_distribution_corner_plot(
                 logger.info(f'Creating 2D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_2d_figure_function(marginal_2d_array_pairs, **sub_figure_kwargs)
             if figure_ is not None:
-                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
+                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_dimensions, labels,
                                                         x_ranges, y_ranges, toolbar, subfigure_size,
                                                         subfigure_min_border, end_axis_minimum_border)
                 row_figures.append(figure_)
@@ -371,8 +376,9 @@ def create_multi_distribution_corner_plot(
 
 
 def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, row_index: int,
-                                            number_of_parameters: int, x_ranges: list[Range1d], y_ranges: list[Range1d],
-                                            toolbar: Toolbar, subfigure_size: int, subfigure_min_border: int,
+                                            number_of_parameters: int, labels: list[str] | None,
+                                            x_ranges: list[Range1d], y_ranges: list[Range1d], toolbar: Toolbar,
+                                            subfigure_size: int, subfigure_min_border: int,
                                             end_axis_minimum_border: int):
     if row_index == column_index:  # 1D marginal distribution figures.
         if len(figure_.left) > 0:
@@ -385,11 +391,15 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
         figure_.min_border = subfigure_min_border
         if column_index == 0:
             figure_.min_border_left = end_axis_minimum_border
+            y_axis_label_index = row_index - 1
+            if y_axis_label_index >= 0:
+                figure_.yaxis.axis_label = labels[y_axis_label_index]
         else:
             figure_.yaxis.visible = False
         figure_.y_range = y_ranges[row_index]
     if row_index == number_of_parameters - 1:
         figure_.min_border_bottom = end_axis_minimum_border
+        figure_.xaxis.axis_label = labels[column_index]
     else:
         figure_.xaxis.visible = False
     if row_index == number_of_parameters - 1 and column_index == number_of_parameters - 1:
