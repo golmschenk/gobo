@@ -393,15 +393,14 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
         figure_.min_border = subfigure_min_border
         if column_index == 0:
             figure_.min_border_left = end_axis_minimum_border
-            y_axis_label_index = row_index - 1
-            if y_axis_label_index >= 0:
-                figure_.yaxis.axis_label = labels[y_axis_label_index]
+            figure_.yaxis.axis_label = labels[row_index]
         else:
             figure_.yaxis.visible = False
         figure_.y_range = y_ranges[row_index]
     if row_index == number_of_dimensions - 1:
         figure_.min_border_bottom = end_axis_minimum_border
         figure_.xaxis.axis_label = labels[column_index]
+        figure_.xaxis.major_label_orientation = math.tau / 8
     else:
         figure_.xaxis.visible = False
     if row_index == number_of_dimensions - 1 and column_index == number_of_dimensions - 1:
