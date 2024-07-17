@@ -300,8 +300,8 @@ def create_corner_plot(
                 logger.info(f'Creating 2D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_2d_figure_function(marginal_2d_array0, marginal_2d_array1, **sub_figure_kwargs)
             if figure_ is not None:
-                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
-                                                        labels, x_ranges, y_ranges, toolbar, subfigure_size,
+                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters, labels,
+                                                        x_ranges, y_ranges, toolbar, subfigure_size,
                                                         subfigure_min_border, end_axis_minimum_border)
                 row_figures.append(figure_)
         plots.append(row_figures)
@@ -376,10 +376,12 @@ def create_multi_distribution_corner_plot(
 
 
 def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, row_index: int,
-                                            number_of_parameters: int, labels: list[str] | None,
+                                            number_of_dimensions: int, labels: list[str] | None,
                                             x_ranges: list[Range1d], y_ranges: list[Range1d], toolbar: Toolbar,
                                             subfigure_size: int, subfigure_min_border: int,
                                             end_axis_minimum_border: int):
+    if labels is None:
+        labels = [None] * number_of_dimensions
     if row_index == column_index:  # 1D marginal distribution figures.
         if len(figure_.left) > 0:
             axis = figure_.left.pop(0)
@@ -397,12 +399,12 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
         else:
             figure_.yaxis.visible = False
         figure_.y_range = y_ranges[row_index]
-    if row_index == number_of_parameters - 1:
+    if row_index == number_of_dimensions - 1:
         figure_.min_border_bottom = end_axis_minimum_border
         figure_.xaxis.axis_label = labels[column_index]
     else:
         figure_.xaxis.visible = False
-    if row_index == number_of_parameters - 1 and column_index == number_of_parameters - 1:
+    if row_index == number_of_dimensions - 1 and column_index == number_of_dimensions - 1:
         figure_.toolbar_location = Place.below
     else:
         figure_.toolbar_location = None
