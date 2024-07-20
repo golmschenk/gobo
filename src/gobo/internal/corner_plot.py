@@ -113,6 +113,16 @@ def create_multi_distribution_1d_histogram_confidence_interval_figure(arrays: li
     return figure_
 
 
+def create_1d_histogram_confidence_interval_figure(
+        array: npt.NDArray,
+        *,
+        color: Color = mediumblue
+) -> figure:
+    figure_ = figure()
+    add_1d_histogram_confidence_interval_to_figure(figure_, array, color)
+    return figure_
+
+
 def create_multi_distribution_2d_kde_confidence_interval_figure(
         array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
     figure_ = figure()
@@ -131,12 +141,23 @@ def create_multi_distribution_2d_histogram_figure(
     return figure_
 
 
-def create_2d_histogram_confidence_interval_contour_figure(
+def create_multi_distribution_2d_histogram_confidence_interval_contour_figure(
         array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
         add_2d_histogram_confidence_interval_contour_to_figure(figure_, *array_pair, color=color)
+    return figure_
+
+
+def create_2d_histogram_confidence_interval_contour_figure(
+        array0: npt.NDArray,
+        array1: npt.NDArray,
+        *,
+        color: Color = mediumblue
+) -> figure:
+    figure_ = figure()
+    add_2d_histogram_confidence_interval_contour_to_figure(figure_, array0, array1, color=color)
     return figure_
 
 
@@ -262,9 +283,10 @@ def create_corner_plot(
         array: npt.NDArray,
         *,
         marginal_1d_figure_function: Callable[
-            Concatenate[npt.NDArray, P], figure] = create_histogram_figure,
+            Concatenate[npt.NDArray, P], figure] = create_1d_histogram_confidence_interval_figure,
         marginal_2d_figure_function: Callable[
-            Concatenate[npt.NDArray, npt.NDArray, P], figure] = create_scatter_figure,
+            Concatenate[
+                npt.NDArray, npt.NDArray, P], figure] = create_2d_histogram_confidence_interval_contour_figure,
         labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
@@ -321,7 +343,7 @@ def create_multi_distribution_corner_plot(
                 list[npt.NDArray], P], figure] = create_multi_distribution_1d_histogram_confidence_interval_figure,
         marginal_2d_figure_function: Callable[
             Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
-        ] = create_2d_histogram_confidence_interval_contour_figure,
+        ] = create_multi_distribution_2d_histogram_confidence_interval_contour_figure,
         labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
