@@ -44,13 +44,13 @@ def add_2d_scatter_to_figure(figure_,
     figure_.scatter(array0, array1, size=3, alpha=0.5, color=color)
 
 
-def create_2d_kde_confidence_interval_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
+def create_2d_kde_credible_interval_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     figure_ = figure()
-    add_2d_kde_confidence_interval_to_figure(figure_, array0, array1)
+    add_2d_kde_credible_interval_to_figure(figure_, array0, array1)
     return figure_
 
 
-def add_2d_kde_confidence_interval_to_figure(
+def add_2d_kde_credible_interval_to_figure(
         figure_: figure,
         array0: npt.NDArray,
         array1: npt.NDArray,
@@ -73,62 +73,62 @@ def add_contour_to_figure(figure_, x_meshgrid, y_meshgrid, z_meshgrid, color):
     z = z_meshgrid.ravel()
     sorted_z = np.sort(z)[::-1]
     cumulative_density = np.cumsum(sorted_z) / np.sum(sorted_z)
-    confidence_intervals = [0.6827, 0.9545, 0.9973]
-    threshold_indexes = np.searchsorted(cumulative_density, confidence_intervals)
+    credible_intervals = [0.6827, 0.9545, 0.9973]
+    threshold_indexes = np.searchsorted(cumulative_density, credible_intervals)
     thresholds = sorted_z[threshold_indexes]
     thresholds = thresholds[::-1]
     thresholds = np.concatenate([thresholds, np.array([np.max(sorted_z)])])
     alpha_interval = 1 / (len(threshold_indexes) + 1)
-    alphas = [alpha_interval * (confidence_interval_index + 1)
-              for confidence_interval_index in range(len(confidence_intervals))]
+    alphas = [alpha_interval * (credible_interval_index + 1)
+              for credible_interval_index in range(len(credible_intervals))]
     figure_.contour(x=x_meshgrid, y=y_meshgrid, z=z_meshgrid, levels=thresholds,
                     fill_color=color, fill_alpha=alphas)
 
 
-def create_1d_kde_confidence_interval_figure(array: npt.NDArray) -> figure:
+def create_1d_kde_credible_interval_figure(array: npt.NDArray) -> figure:
     figure_ = figure()
-    add_1d_kde_confidence_interval_to_figure(figure_, array)
+    add_1d_kde_credible_interval_to_figure(figure_, array)
     return figure_
 
 
-def create_multi_distribution_1d_kde_confidence_interval_figure(arrays: list[npt.NDArray]) -> figure:
+def create_multi_distribution_1d_kde_credible_interval_figure(arrays: list[npt.NDArray]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array, color in zip(arrays, colors):
-        add_1d_kde_confidence_interval_to_figure(figure_, array, color=color)
+        add_1d_kde_credible_interval_to_figure(figure_, array, color=color)
     return figure_
 
 
-def add_1d_histogram_confidence_interval_to_figure(figure_: figure, array: npt.NDArray, color: Color):
+def add_1d_histogram_credible_interval_to_figure(figure_: figure, array: npt.NDArray, color: Color):
     histogram_values, histogram_edges = np.histogram(array, bins=60, density=True)
     histogram_centers = (histogram_edges[1:] + histogram_edges[:-1]) / 2
-    add_1d_confidence_interval_contour_to_figure(figure_, histogram_centers, histogram_values, color)
+    add_1d_credible_interval_contour_to_figure(figure_, histogram_centers, histogram_values, color)
 
 
-def create_multi_distribution_1d_histogram_confidence_interval_figure(arrays: list[npt.NDArray]) -> figure:
+def create_multi_distribution_1d_histogram_credible_interval_figure(arrays: list[npt.NDArray]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array, color in zip(arrays, colors):
-        add_1d_histogram_confidence_interval_to_figure(figure_, array, color)
+        add_1d_histogram_credible_interval_to_figure(figure_, array, color)
     return figure_
 
 
-def create_1d_histogram_confidence_interval_figure(
+def create_1d_histogram_credible_interval_figure(
         array: npt.NDArray,
         *,
         color: Color = mediumblue
 ) -> figure:
     figure_ = figure()
-    add_1d_histogram_confidence_interval_to_figure(figure_, array, color)
+    add_1d_histogram_credible_interval_to_figure(figure_, array, color)
     return figure_
 
 
-def create_multi_distribution_2d_kde_confidence_interval_figure(
+def create_multi_distribution_2d_kde_credible_interval_figure(
         array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
-        add_2d_kde_confidence_interval_to_figure(figure_, *array_pair, color=color)
+        add_2d_kde_credible_interval_to_figure(figure_, *array_pair, color=color)
     return figure_
 
 
@@ -141,23 +141,23 @@ def create_multi_distribution_2d_histogram_figure(
     return figure_
 
 
-def create_multi_distribution_2d_histogram_confidence_interval_contour_figure(
+def create_multi_distribution_2d_histogram_credible_interval_contour_figure(
         array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
     figure_ = figure()
     colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
-        add_2d_histogram_confidence_interval_contour_to_figure(figure_, *array_pair, color=color)
+        add_2d_histogram_credible_interval_contour_to_figure(figure_, *array_pair, color=color)
     return figure_
 
 
-def create_2d_histogram_confidence_interval_contour_figure(
+def create_2d_histogram_credible_interval_contour_figure(
         array0: npt.NDArray,
         array1: npt.NDArray,
         *,
         color: Color = mediumblue
 ) -> figure:
     figure_ = figure()
-    add_2d_histogram_confidence_interval_contour_to_figure(figure_, array0, array1, color=color)
+    add_2d_histogram_credible_interval_contour_to_figure(figure_, array0, array1, color=color)
     return figure_
 
 
@@ -180,7 +180,7 @@ def add_2d_histogram_to_figure(
                   dh=image_height, palette=palette)
 
 
-def add_2d_histogram_confidence_interval_contour_to_figure(
+def add_2d_histogram_credible_interval_contour_to_figure(
         figure_: figure,
         array0: npt.NDArray,
         array1: npt.NDArray,
@@ -195,7 +195,7 @@ def add_2d_histogram_confidence_interval_contour_to_figure(
     add_contour_to_figure(figure_, x_meshgrid, y_meshgrid, z_meshgrid, color)
 
 
-def add_1d_kde_confidence_interval_to_figure(
+def add_1d_kde_credible_interval_to_figure(
         figure_: figure,
         array: npt.NDArray,
         *,
@@ -206,16 +206,16 @@ def add_1d_kde_confidence_interval_to_figure(
     # Evaluate the KDE on a grid
     plotting_positions = np.linspace(*distribution_plotting_range, 1000)
     distribution_values = kde(plotting_positions)
-    add_1d_confidence_interval_contour_to_figure(figure_, plotting_positions, distribution_values, color)
+    add_1d_credible_interval_contour_to_figure(figure_, plotting_positions, distribution_values, color)
 
 
-def add_1d_confidence_interval_contour_to_figure(figure_, distribution_positions, distribution_values, color):
-    confidence_interval_thresholds = np.array([0.6827, 0.9545, 0.9973])
-    half_confidence_interval_thresholds = confidence_interval_thresholds / 2
+def add_1d_credible_interval_contour_to_figure(figure_, distribution_positions, distribution_values, color):
+    credible_interval_thresholds = np.array([0.6827, 0.9545, 0.9973])
+    half_credible_interval_thresholds = credible_interval_thresholds / 2
     quantile_thresholds = np.concatenate([
-        0.5 - half_confidence_interval_thresholds[::-1],  # The lower bounds of the intervals.
+        0.5 - half_credible_interval_thresholds[::-1],  # The lower bounds of the intervals.
         np.array([0.5]),  # The median.
-        0.5 + half_confidence_interval_thresholds,  # The upper bounds of the intervals.
+        0.5 + half_credible_interval_thresholds,  # The upper bounds of the intervals.
     ])
     threshold_values = np.quantile(distribution_positions, quantile_thresholds, weights=distribution_values,
                                    method='inverted_cdf')
@@ -232,12 +232,12 @@ def add_1d_confidence_interval_contour_to_figure(figure_, distribution_positions
             interval_segment_values[split_index],
             interval_segment_values[split_index + 1][0]
         )
-    alpha_interval = 1 / (len(confidence_interval_thresholds) + 1)
-    for confidence_interval_threshold_index in range(len(confidence_interval_thresholds)):
-        lower_segment_positions = interval_segment_plotting_positions[confidence_interval_threshold_index + 1]
-        upper_segment_positions = interval_segment_plotting_positions[-(confidence_interval_threshold_index + 2)]
-        lower_segment_values = interval_segment_values[confidence_interval_threshold_index + 1]
-        upper_segment_values = interval_segment_values[-(confidence_interval_threshold_index + 2)]
+    alpha_interval = 1 / (len(credible_interval_thresholds) + 1)
+    for credible_interval_threshold_index in range(len(credible_interval_thresholds)):
+        lower_segment_positions = interval_segment_plotting_positions[credible_interval_threshold_index + 1]
+        upper_segment_positions = interval_segment_plotting_positions[-(credible_interval_threshold_index + 2)]
+        lower_segment_values = interval_segment_values[credible_interval_threshold_index + 1]
+        upper_segment_values = interval_segment_values[-(credible_interval_threshold_index + 2)]
         lower_column_data_source = ColumnDataSource(data={
             'base': lower_segment_positions,
             'lower': np.zeros_like(lower_segment_values),
@@ -248,7 +248,7 @@ def add_1d_confidence_interval_contour_to_figure(figure_, distribution_positions
             'lower': np.zeros_like(upper_segment_values),
             'upper': upper_segment_values,
         })
-        alpha = alpha_interval * (confidence_interval_threshold_index + 1)
+        alpha = alpha_interval * (credible_interval_threshold_index + 1)
         lower_band = Band(source=lower_column_data_source, base='base', lower='lower', upper='upper',
                           fill_color=color, fill_alpha=alpha)
         upper_band = Band(source=upper_column_data_source, base='base', lower='lower', upper='upper',
@@ -283,10 +283,10 @@ def create_corner_plot(
         array: npt.NDArray,
         *,
         marginal_1d_figure_function: Callable[
-            Concatenate[npt.NDArray, P], figure] = create_1d_histogram_confidence_interval_figure,
+            Concatenate[npt.NDArray, P], figure] = create_1d_histogram_credible_interval_figure,
         marginal_2d_figure_function: Callable[
             Concatenate[
-                npt.NDArray, npt.NDArray, P], figure] = create_2d_histogram_confidence_interval_contour_figure,
+                npt.NDArray, npt.NDArray, P], figure] = create_2d_histogram_credible_interval_contour_figure,
         labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
@@ -340,10 +340,10 @@ def create_multi_distribution_corner_plot(
         *,
         marginal_1d_figure_function: Callable[
             Concatenate[
-                list[npt.NDArray], P], figure] = create_multi_distribution_1d_histogram_confidence_interval_figure,
+                list[npt.NDArray], P], figure] = create_multi_distribution_1d_histogram_credible_interval_figure,
         marginal_2d_figure_function: Callable[
             Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
-        ] = create_multi_distribution_2d_histogram_confidence_interval_contour_figure,
+        ] = create_multi_distribution_2d_histogram_credible_interval_contour_figure,
         labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
