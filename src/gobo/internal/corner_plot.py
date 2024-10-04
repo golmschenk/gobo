@@ -211,33 +211,16 @@ def add_1d_kde_credible_interval_to_figure(
 
 def add_1d_credible_interval_contour_to_figure(figure_, distribution_positions, distribution_values, color):
     credible_interval_thresholds = np.array([0.6827, 0.9545, 0.9973])
-    half_credible_interval_thresholds = credible_interval_thresholds / 2
-    quantile_thresholds = np.concatenate([
-        0.5 - half_credible_interval_thresholds[::-1],  # The lower bounds of the intervals.
-        np.array([0.5]),  # The median.
-        0.5 + half_credible_interval_thresholds,  # The upper bounds of the intervals.
-    ])
-    threshold_values = np.quantile(distribution_positions, quantile_thresholds, weights=distribution_values,
-                                   method='inverted_cdf')
-    plotting_position_threshold_indexes = np.searchsorted(distribution_positions, threshold_values)
-    interval_segment_plotting_positions = np.split(distribution_positions, plotting_position_threshold_indexes)
-    interval_segment_values = np.split(distribution_values, plotting_position_threshold_indexes)
-    # Fill the gaps between intervals.
-    for split_index in range(len(interval_segment_plotting_positions) - 1):
-        interval_segment_plotting_positions[split_index] = np.append(
-            interval_segment_plotting_positions[split_index],
-            interval_segment_plotting_positions[split_index + 1][0]
-        )
-        interval_segment_values[split_index] = np.append(
-            interval_segment_values[split_index],
-            interval_segment_values[split_index + 1][0]
-        )
+    plotting_position_threshold_indexes = get_indexes_for_thresholds(credible_interval_thresholds,
+                                                                     distribution_positions, distribution_values)
+    interval_segment_plotting_positions_array, interval_segment_values_array = create_segments_for_indexes(
+        plotting_position_threshold_indexes, distribution_positions, distribution_values)
     alpha_interval = 1 / (len(credible_interval_thresholds) + 1)
     for credible_interval_threshold_index in range(len(credible_interval_thresholds)):
-        lower_segment_positions = interval_segment_plotting_positions[credible_interval_threshold_index + 1]
-        upper_segment_positions = interval_segment_plotting_positions[-(credible_interval_threshold_index + 2)]
-        lower_segment_values = interval_segment_values[credible_interval_threshold_index + 1]
-        upper_segment_values = interval_segment_values[-(credible_interval_threshold_index + 2)]
+        lower_segment_positions = interval_segment_plotting_positions_array[credible_interval_threshold_index + 1]
+        upper_segment_positions = interval_segment_plotting_positions_array[-(credible_interval_threshold_index + 2)]
+        lower_segment_values = interval_segment_values_array[credible_interval_threshold_index + 1]
+        upper_segment_values = interval_segment_values_array[-(credible_interval_threshold_index + 2)]
         lower_column_data_source = ColumnDataSource(data={
             'base': lower_segment_positions,
             'lower': np.zeros_like(lower_segment_values),
@@ -261,6 +244,39 @@ def add_1d_credible_interval_contour_to_figure(figure_, distribution_positions, 
     median_position = distribution_positions[median_position_index]
     figure_.line(x=[median_position, median_position], y=[0, median_value], color=color)
     figure_.line(x=distribution_positions, y=distribution_values, color=color)
+
+
+def create_segments_for_indexes(
+        plotting_position_threshold_indexes: npt.NDArray,
+        distribution_positions: npt.NDArray,
+        distribution_values: npt.NDArray
+) -> (npt.NDArray, npt.NDArray):
+    interval_segment_plotting_positions_array = np.split(distribution_positions, plotting_position_threshold_indexes)
+    interval_segment_values_array = np.split(distribution_values, plotting_position_threshold_indexes)
+    # Fill the gaps between intervals.
+    for split_index in reversed(range(len(interval_segment_plotting_positions_array) - 1)):
+        interval_segment_plotting_positions_array[split_index] = np.append(
+            interval_segment_plotting_positions_array[split_index],
+            interval_segment_plotting_positions_array[split_index + 1][0]
+        )
+        interval_segment_values_array[split_index] = np.append(
+            interval_segment_values_array[split_index],
+            interval_segment_values_array[split_index + 1][0]
+        )
+    return interval_segment_plotting_positions_array, interval_segment_values_array
+
+
+def get_indexes_for_thresholds(credible_interval_thresholds, distribution_positions, distribution_values):
+    half_credible_interval_thresholds = credible_interval_thresholds / 2
+    quantile_thresholds = np.concatenate([
+        0.5 - half_credible_interval_thresholds[::-1],  # The lower bounds of the intervals.
+        np.array([0.5]),  # The median.
+        0.5 + half_credible_interval_thresholds,  # The upper bounds of the intervals.
+    ])
+    threshold_values = np.quantile(distribution_positions, quantile_thresholds, weights=distribution_values,
+                                   method='inverted_cdf')
+    plotting_position_threshold_indexes = np.searchsorted(distribution_positions, threshold_values)
+    return plotting_position_threshold_indexes
 
 
 def get_range_1d_for_array(array: npt.NDArray, padding_fraction: float = 0.05) -> Range1d:
