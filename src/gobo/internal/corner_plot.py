@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import logging
 import math
-from typing import Callable, Concatenate, ParamSpec, Any
+from typing import Callable, Concatenate, ParamSpec, Any, Iterable
 
 import numpy as np
 import numpy.typing as npt
 from bokeh.colors import Color
-from bokeh.colors.named import mediumblue, firebrick
 from bokeh.core.enums import Place
 from bokeh.layouts import layout
 from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Band, ColumnDataSource, \
@@ -13,6 +14,8 @@ from bokeh.models import Range1d, Toolbar, PanTool, WheelZoomTool, BoxZoomTool, 
 from bokeh.palettes import varying_alpha_palette
 from bokeh.plotting import figure, show
 from scipy import stats
+
+from gobo.internal.palette import default_discrete_palette
 
 P = ParamSpec('P')
 
@@ -36,11 +39,13 @@ def create_scatter_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     return figure_
 
 
-def add_2d_scatter_to_figure(figure_,
-                             array0,
-                             array1,
-                             *,
-                             color: Color = mediumblue, ):
+def add_2d_scatter_to_figure(
+        figure_,
+        array0,
+        array1,
+        *,
+        color: Color = default_discrete_palette.blue
+):
     figure_.scatter(array0, array1, size=3, alpha=0.5, color=color)
 
 
@@ -55,7 +60,7 @@ def add_2d_kde_credible_interval_to_figure(
         array0: npt.NDArray,
         array1: npt.NDArray,
         *,
-        color: Color = mediumblue,
+        color: Color = default_discrete_palette.blue
 ):
     combined_marginal_2d_array = np.stack([array0, array1], axis=0)
     kde = stats.gaussian_kde(combined_marginal_2d_array)
@@ -91,9 +96,11 @@ def create_1d_kde_credible_interval_figure(array: npt.NDArray) -> figure:
     return figure_
 
 
-def create_multi_distribution_1d_kde_credible_interval_figure(arrays: list[npt.NDArray]) -> figure:
+def create_multi_distribution_1d_kde_credible_interval_figure(
+        arrays: list[npt.NDArray],
+        colors: Iterable[Color] = default_discrete_palette,
+) -> figure:
     figure_ = figure()
-    colors = [mediumblue, firebrick]
     for array, color in zip(arrays, colors):
         add_1d_kde_credible_interval_to_figure(figure_, array, color=color)
     return figure_
@@ -105,9 +112,11 @@ def add_1d_histogram_credible_interval_to_figure(figure_: figure, array: npt.NDA
     add_1d_credible_interval_contour_to_figure(figure_, histogram_centers, histogram_values, color)
 
 
-def create_multi_distribution_1d_histogram_credible_interval_figure(arrays: list[npt.NDArray]) -> figure:
+def create_multi_distribution_1d_histogram_credible_interval_figure(
+        arrays: list[npt.NDArray],
+        colors: Iterable[Color] = default_discrete_palette,
+) -> figure:
     figure_ = figure()
-    colors = [mediumblue, firebrick]
     for array, color in zip(arrays, colors):
         add_1d_histogram_credible_interval_to_figure(figure_, array, color)
     return figure_
@@ -116,7 +125,7 @@ def create_multi_distribution_1d_histogram_credible_interval_figure(arrays: list
 def create_1d_histogram_credible_interval_figure(
         array: npt.NDArray,
         *,
-        color: Color = mediumblue
+        color: Color = default_discrete_palette.blue
 ) -> figure:
     figure_ = figure()
     add_1d_histogram_credible_interval_to_figure(figure_, array, color)
@@ -124,27 +133,30 @@ def create_1d_histogram_credible_interval_figure(
 
 
 def create_multi_distribution_2d_kde_credible_interval_figure(
-        array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
+        array_pairs: list[tuple[npt.NDArray, npt.NDArray]],
+        colors: Iterable[Color] = default_discrete_palette,
+) -> figure:
     figure_ = figure()
-    colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
         add_2d_kde_credible_interval_to_figure(figure_, *array_pair, color=color)
     return figure_
 
 
 def create_multi_distribution_2d_histogram_figure(
-        array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
+        array_pairs: list[tuple[npt.NDArray, npt.NDArray]],
+        colors: Iterable[Color] = default_discrete_palette,
+) -> figure:
     figure_ = figure()
-    colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
         add_2d_histogram_to_figure(figure_, *array_pair, color=color)
     return figure_
 
 
 def create_multi_distribution_2d_histogram_credible_interval_contour_figure(
-        array_pairs: list[tuple[npt.NDArray, npt.NDArray]]) -> figure:
+        array_pairs: list[tuple[npt.NDArray, npt.NDArray]],
+        colors: Iterable[Color] = default_discrete_palette,
+) -> figure:
     figure_ = figure()
-    colors = [mediumblue, firebrick]
     for array_pair, color in zip(array_pairs, colors):
         add_2d_histogram_credible_interval_contour_to_figure(figure_, *array_pair, color=color)
     return figure_
@@ -154,7 +166,7 @@ def create_2d_histogram_credible_interval_contour_figure(
         array0: npt.NDArray,
         array1: npt.NDArray,
         *,
-        color: Color = mediumblue
+        color: Color = default_discrete_palette.blue
 ) -> figure:
     figure_ = figure()
     add_2d_histogram_credible_interval_contour_to_figure(figure_, array0, array1, color=color)
@@ -166,7 +178,7 @@ def add_2d_histogram_to_figure(
         array0: npt.NDArray,
         array1: npt.NDArray,
         *,
-        color: Color = mediumblue,
+        color: Color = default_discrete_palette.blue
 ):
     histogram_values, histogram_edges0, histogram_edges1 = np.histogram2d(array0, array1, bins=30, density=True)
     histogram_maximum = np.max(histogram_values)
@@ -185,7 +197,7 @@ def add_2d_histogram_credible_interval_contour_to_figure(
         array0: npt.NDArray,
         array1: npt.NDArray,
         *,
-        color: Color = mediumblue,
+        color: Color = default_discrete_palette.blue
 ):
     histogram_values, histogram_edges0, histogram_edges1 = np.histogram2d(array0, array1, bins=[30, 40], density=True)
     histogram_centers0 = (histogram_edges0[1:] + histogram_edges0[:-1]) / 2
@@ -199,7 +211,7 @@ def add_1d_kde_credible_interval_to_figure(
         figure_: figure,
         array: npt.NDArray,
         *,
-        color: Color = mediumblue,
+        color: Color = default_discrete_palette.blue
 ):
     kde = stats.gaussian_kde(array)
     distribution_plotting_range = get_padded_range_for_array(array)
