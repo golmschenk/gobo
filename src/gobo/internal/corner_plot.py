@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import math
+import warnings
 from typing import Callable, Concatenate, ParamSpec, Any, Iterable
 
 import numpy as np
@@ -338,6 +339,7 @@ def add_1d_credible_interval_contour_to_figure(
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
                              f'intervals ({len(credible_intervals)} passed).')
+    alphas = np.array([0.1, 0.3, 0.5])
     credible_interval_thresholds = credible_intervals
     plotting_position_threshold_indexes = get_indexes_for_thresholds(credible_interval_thresholds,
                                                                      distribution_positions, distribution_values)
@@ -431,12 +433,22 @@ def create_corner_plot(
         marginal_2d_figure_function: Callable[
             Concatenate[
                 npt.NDArray, npt.NDArray, P], figure] = create_2d_histogram_credible_interval_contour_figure,
-        labels: list[str] | None = None,
+        dimension_labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
-        sub_figure_kwargs: dict[Any, Any] = None
+        sub_figure_kwargs: dict[Any, Any] = None,
+        # Deprecated keyword parameters.
+        labels: list[str] | None = None,
 ):
+    if dimension_labels is not None and labels is not None:
+        raise ValueError('Both `dimension_labels` and `labels` cannot be set at the same time.')
+    if labels is not None:
+        warnings.warn('`labels` is deprecated and will be removed in the future. '
+                      'Please use `dimension_labels` instead.', UserWarning)
+        dimension_labels = labels
+
+
     if sub_figure_kwargs is None:
         sub_figure_kwargs = {}
     assert len(array.shape) == 2
@@ -466,8 +478,8 @@ def create_corner_plot(
                 logger.info(f'Creating 2D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_2d_figure_function(marginal_2d_array0, marginal_2d_array1, **sub_figure_kwargs)
             if figure_ is not None:
-                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters, labels,
-                                                        x_ranges, y_ranges, toolbar, subfigure_size,
+                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_parameters,
+                                                        dimension_labels, x_ranges, y_ranges, toolbar, subfigure_size,
                                                         subfigure_min_border, end_axis_minimum_border)
                 row_figures.append(figure_)
         plots.append(row_figures)
@@ -488,12 +500,21 @@ def create_multi_distribution_corner_plot(
         marginal_2d_figure_function: Callable[
             Concatenate[list[tuple[npt.NDArray, npt.NDArray]], P], figure
         ] = create_multi_distribution_2d_histogram_credible_interval_contour_figure,
-        labels: list[str] | None = None,
+        dimension_labels: list[str] | None = None,
         subfigure_size: int = 200,
         subfigure_min_border: int = 5,
         end_axis_minimum_border: int = 100,
-        sub_figure_kwargs: dict[Any, Any] = None
+        sub_figure_kwargs: dict[Any, Any] = None,
+        # Deprecated keyword parameters.
+        labels: list[str] | None = None,
 ) -> Column:
+    if dimension_labels is not None and labels is not None:
+        raise ValueError('Both `dimension_labels` and `labels` cannot be set at the same time.')
+    if labels is not None:
+        warnings.warn('`labels` is deprecated and will be removed in the future. '
+             'Please use `dimension_labels` instead.', UserWarning)
+        dimension_labels = labels
+
     if sub_figure_kwargs is None:
         sub_figure_kwargs = {}
 
@@ -502,7 +523,7 @@ def create_multi_distribution_corner_plot(
         assert len(array.shape) == 2
         assert array.shape[1] == number_of_dimensions
 
-    if labels is not None and len(labels) != number_of_dimensions:
+    if dimension_labels is not None and len(dimension_labels) != number_of_dimensions:
         raise ValueError('`labels` must be the same length as the number of dimensions.')
 
     # Prepare shared components.
@@ -529,8 +550,8 @@ def create_multi_distribution_corner_plot(
                 logger.info(f'Creating 2D marginal figure for row {row_index}, column {column_index}.')
                 figure_ = marginal_2d_figure_function(marginal_2d_array_pairs, **sub_figure_kwargs)
             if figure_ is not None:
-                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_dimensions, labels,
-                                                        x_ranges, y_ranges, toolbar, subfigure_size,
+                compose_figure_for_corner_plot_position(figure_, column_index, row_index, number_of_dimensions,
+                                                        dimension_labels, x_ranges, y_ranges, toolbar, subfigure_size,
                                                         subfigure_min_border, end_axis_minimum_border)
                 row_figures.append(figure_)
         plots.append(row_figures)
