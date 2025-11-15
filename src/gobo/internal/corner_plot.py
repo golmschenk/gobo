@@ -23,17 +23,6 @@ P = ParamSpec('P')
 logger = logging.getLogger(__name__)
 
 
-def create_histogram_figure(array: npt.NDArray) -> figure:
-    figure_ = figure()
-    add_1d_histogram_to_figure(figure_, array)
-    return figure_
-
-
-def add_1d_histogram_to_figure(figure_, array):
-    hist, edges = np.histogram(array, density=True, bins=30)
-    figure_.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], line_color="white")
-
-
 def create_scatter_figure(array0: npt.NDArray, array1: npt.NDArray) -> figure:
     figure_ = figure()
     add_2d_scatter_to_figure(figure_, array0, array1, )
