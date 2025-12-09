@@ -476,8 +476,8 @@ def create_corner_plot(
     # Create a grid plot
     layout_ = layout(*plots)
 
-    # Display the plot
-    show(layout_)
+    # Return the plot
+    return layout_
 
 
 def create_multi_distribution_corner_plot(
