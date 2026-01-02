@@ -4,7 +4,7 @@ from numpy import typing as npt
 from gobo.internal.histogram import add_1d_histogram_to_figure
 
 
-def histogram(
+def create_histogram_figure(
         data: npt.NDArray,
         *args,
         bins: int = 30,
