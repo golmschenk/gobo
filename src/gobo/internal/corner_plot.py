@@ -239,6 +239,17 @@ def create_2d_histogram_credible_interval_contour_figure(
     return figure_
 
 
+def create_2d_histogram_figure(
+        array0: npt.NDArray,
+        array1: npt.NDArray,
+        *,
+        color: Color = default_discrete_palette.blue
+) -> figure:
+    figure_ = figure()
+    add_2d_histogram_to_figure(figure_, array0, array1, color=color)
+    return figure_
+
+
 def add_2d_histogram_to_figure(
         figure_: figure,
         array0: npt.NDArray,
