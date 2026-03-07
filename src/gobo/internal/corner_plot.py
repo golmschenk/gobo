@@ -378,7 +378,7 @@ def create_segments_for_indexes(
         plotting_position_threshold_indexes: npt.NDArray,
         distribution_positions: npt.NDArray,
         distribution_values: npt.NDArray
-) -> (npt.NDArray, npt.NDArray):
+) -> tuple[npt.NDArray, npt.NDArray]:
     interval_segment_plotting_positions_array = np.split(distribution_positions, plotting_position_threshold_indexes)
     interval_segment_values_array = np.split(distribution_values, plotting_position_threshold_indexes)
     # Fill the gaps between intervals.
@@ -415,7 +415,7 @@ def get_range_1d_for_array(array: npt.NDArray, padding_fraction: float = 0.05) -
     return range_1d
 
 
-def get_padded_range_for_array(array, padding_fraction: float = 0.05) -> (float, float):
+def get_padded_range_for_array(array, padding_fraction: float = 0.05) -> tuple[float, float]:
     array_minimum = np.min(array)
     array_maximum = np.max(array)
     array_difference = array_maximum - array_minimum
@@ -598,9 +598,3 @@ def compose_figure_for_corner_plot_position(figure_: figure, column_index: int, 
     figure_.frame_height = subfigure_size
     figure_.x_range = x_ranges[column_index]
     figure_.toolbar = toolbar
-    figure_.xaxis.ticker.desired_num_ticks = 3
-    figure_.yaxis.ticker.desired_num_ticks = 4
-    # figure_.xaxis.ticker.mantissas = np.linspace(0.5,9.5,19).tolist()
-    # figure_.yaxis.ticker.mantissas = np.linspace(0.5,9.5,19).tolist()
-    figure_.xaxis.ticker.mantissas = np.linspace(1, 9, 9).tolist()
-    figure_.yaxis.ticker.mantissas = np.linspace(1, 9, 9).tolist()
