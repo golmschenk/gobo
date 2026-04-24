@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import logging
 import sys
 
@@ -13,7 +12,7 @@ def create_default_formatter() -> logging.Formatter:
 
 
 def set_up_default_logger():
-    global logger_initialized  # noqa PLW0603 : TODO: Probably a bad hack. Consider further.
+    global logger_initialized  # TODO: Probably a bad hack. Consider further.
     if not logger_initialized:
         formatter = create_default_formatter()
         handler = logging.StreamHandler(sys.stdout)
