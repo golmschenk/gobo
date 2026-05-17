@@ -47,7 +47,7 @@ def create_2d_kde_credible_interval_figure(array0: npt.NDArray, array1: npt.NDAr
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -72,7 +72,7 @@ def add_2d_kde_credible_interval_to_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -98,6 +98,7 @@ def add_contour_to_figure(figure_: figure, x_meshgrid, y_meshgrid, z_meshgrid, c
     thresholds = sorted_z[threshold_indexes]
     thresholds = thresholds[::-1]
     thresholds = np.concatenate([thresholds, np.array([np.max(sorted_z)])])
+    alphas = alphas[::-1]
     figure_.contour(x=x_meshgrid, y=y_meshgrid, z=z_meshgrid, levels=thresholds,
                     fill_color=color, fill_alpha=alphas)
 
@@ -119,7 +120,7 @@ def create_multi_distribution_1d_kde_credible_interval_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -141,7 +142,7 @@ def add_1d_histogram_credible_interval_to_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -163,7 +164,7 @@ def create_multi_distribution_1d_histogram_credible_interval_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -216,7 +217,7 @@ def create_multi_distribution_2d_histogram_credible_interval_contour_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -283,7 +284,7 @@ def add_2d_histogram_credible_interval_contour_to_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -309,7 +310,7 @@ def add_1d_kde_credible_interval_to_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
@@ -334,12 +335,13 @@ def add_1d_credible_interval_contour_to_figure(
     if alphas is None:
         alpha_interval = 1 / (len(credible_intervals) + 1)
         alphas = [alpha_interval * (credible_interval_index + 1)
-                  for credible_interval_index in range(len(credible_intervals))]
+                  for credible_interval_index in range(len(credible_intervals))][::-1]
     else:
         if len(alphas) != len(credible_intervals):
             raise ValueError(f'The number of alphas passed ({len(alphas)} passed) must match the number of credible '
                              f'intervals ({len(credible_intervals)} passed).')
-    alphas = np.array([0.1, 0.3, 0.5])
+    alphas = np.array([0.5, 0.3, 0.1])  # TODO: Why is this here? Probably just looks better then the above?
+    alphas_in_interval_order = alphas[::-1]
     credible_interval_thresholds = credible_intervals
     plotting_position_threshold_indexes = get_indexes_for_thresholds(credible_interval_thresholds,
                                                                      distribution_positions, distribution_values)
@@ -361,9 +363,9 @@ def add_1d_credible_interval_contour_to_figure(
             'upper': upper_segment_values,
         })
         lower_band = Band(source=lower_column_data_source, base='base', lower='lower', upper='upper',
-                          fill_color=color, fill_alpha=alphas[credible_interval_threshold_index])
+                          fill_color=color, fill_alpha=alphas_in_interval_order[credible_interval_threshold_index])
         upper_band = Band(source=upper_column_data_source, base='base', lower='lower', upper='upper',
-                          fill_color=color, fill_alpha=alphas[credible_interval_threshold_index])
+                          fill_color=color, fill_alpha=alphas_in_interval_order[credible_interval_threshold_index])
         figure_.add_layout(lower_band)
         figure_.add_layout(upper_band)
     median_position_index = plotting_position_threshold_indexes[
