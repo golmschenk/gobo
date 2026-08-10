@@ -2,12 +2,19 @@ import logging
 from typing import Self
 
 import numpy as np
-from bokeh.document import Document
-from bokeh.server.server import Server
+import pandas as pd
+import polars as pl
 from bokeh.application import Application
 from bokeh.application.handlers.function import FunctionHandler
+from bokeh.document import Document
+from bokeh.io import show
+from bokeh.layouts import column
+from bokeh.models import Slider
+from bokeh.models.sources import ColumnDataSource
+from bokeh.plotting import figure
+from bokeh.server.server import Server
 
-from gobo.internal.corner_plot import create_multi_distribution_corner_plot
+from gobo.internal.corner_plot_new.corner_plot_revised import CornerPlot
 
 DEFAULT_PORT = 28194
 
@@ -24,11 +31,23 @@ class PosteriorDistributionExplorer:
 
     @staticmethod
     def add_to_document(document: Document) -> None:
-        random_generator = np.random.default_rng()
-        array0 = random_generator.normal(loc=0.0, scale=1.0, size=[10000, 2])
-        array1 = random_generator.normal(loc=0.5, scale=1.0, size=[10000, 2])
-        corner_plot = create_multi_distribution_corner_plot([array0, array1])
+        sources = PosteriorDistributionExplorer.create_example_distribution_sources()
+        corner_plot = CornerPlot.new(sources)
         document.add_root(corner_plot)
+
+    @staticmethod
+    def create_example_distribution_sources() -> list[ColumnDataSource]:
+        random_generator = np.random.default_rng()
+        array0_part0 = random_generator.normal(loc=0.0, scale=1.0, size=[5000, 4])
+        array0_part1 = random_generator.normal(loc=-2.0, scale=1.0, size=[5000, 4])
+        array0 = np.concatenate([array0_part0, array0_part1], axis=0)
+        array1_part0 = random_generator.normal(loc=0.5, scale=1.0, size=[5000, 4])
+        array1_part1 = random_generator.normal(loc=1.0, scale=1.0, size=[5000, 4])
+        array1 = np.concatenate([array1_part0, array1_part1], axis=0)
+        parameter_names = ['a', 'b', 'c', 'd']
+        source0 = ColumnDataSource({parameter_name: array0[:, i] for i, parameter_name in enumerate(parameter_names)})
+        source1 = ColumnDataSource({parameter_name: array1[:, i] for i, parameter_name in enumerate(parameter_names)})
+        return [source0, source1]
 
     def run(self):
         apps = {'/': Application(FunctionHandler(self.add_to_document))}  # Put the app at the root address.

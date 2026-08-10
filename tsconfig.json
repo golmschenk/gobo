@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "models/*": [
+        "node_modules/@bokeh/bokehjs/build/js/lib/models/*"
+      ],
+      "core/*": [
+        "node_modules/@bokeh/bokehjs/build/js/lib/core/*"
+      ]
+    }
+  }
+}

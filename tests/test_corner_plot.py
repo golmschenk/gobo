@@ -1,6 +1,6 @@
 import numpy as np
 
-from gobo.internal.corner_plot import create_segments_for_indexes
+from gobo.internal.corner_plot_new import create_segments_for_indexes
 
 
 def test_create_segments_for_indexes_handles_empty_segments():
