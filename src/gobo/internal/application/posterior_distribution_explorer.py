@@ -2,16 +2,10 @@ import logging
 from typing import Self
 
 import numpy as np
-import pandas as pd
-import polars as pl
 from bokeh.application import Application
 from bokeh.application.handlers.function import FunctionHandler
 from bokeh.document import Document
-from bokeh.io import show
-from bokeh.layouts import column
-from bokeh.models import Slider
 from bokeh.models.sources import ColumnDataSource
-from bokeh.plotting import figure
 from bokeh.server.server import Server
 
 from gobo.internal.corner_plot_new.corner_plot_revised import CornerPlot
