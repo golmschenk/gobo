@@ -1,8 +1,10 @@
+import itertools
 import logging
 import math
 from typing import ParamSpec, Callable, Self, Iterable
 
 import numpy as np
+import numpy.typing as npt
 from bokeh.colors import Color
 from bokeh.core.enums import Place
 from bokeh.models import Column, PanTool, WheelZoomTool, BoxZoomTool, ResetTool, Toolbar, Row
@@ -70,12 +72,58 @@ class CornerPlot(Column):
             figure_dictionary[row_parameter_name] = row_figure_dictionary
         rows = [Row(children=[figure_ for figure_ in row_figure_dictionary.values()])
                 for row_figure_dictionary in figure_dictionary.values()]
-        instance = cls(children=rows)
+        instance = cls(distribution_sources=distribution_sources, children=rows, figure_dictionary=figure_dictionary,
+                       x_range_dictionary=x_range_dictionary, y_range_dictionary=y_range_dictionary)
+        instance.set_ranges_to_data()
         return instance
 
-    def __init__(self, children: list[Row]):
+    def __init__(
+            self,
+            distribution_sources: list[ColumnDataSource],
+            children: list[Row],
+            figure_dictionary: dict[str, dict[str, figure]],
+            x_range_dictionary: dict[str, Range1d],
+            y_range_dictionary: dict[str, Range1d],
+    ) -> None:
         super().__init__(children=children)
+        # Bokeh treats public attributes as things to serialize and send to the browser side. For Python only
+        #   components, we make them private and create corresponding properties.
+        self._distribution_sources = distribution_sources
+        self._figure_dictionary = figure_dictionary
+        self.x_range_dictionary = x_range_dictionary
+        self.y_range_dictionary = y_range_dictionary
 
+    @property
+    def distribution_sources(self) -> list[ColumnDataSource]:
+        return self._distribution_sources
+
+    @distribution_sources.setter
+    def distribution_sources(self, value):
+        self._distribution_sources = value
+
+    @property
+    def figure_dictionary(self) -> dict[str, dict[str, figure]]:
+        return self._figure_dictionary
+
+    @figure_dictionary.setter
+    def figure_dictionary(self, value):
+        self._figure_dictionary = value
+
+    @property
+    def x_range_dictionary(self) -> dict[str, Range1d]:
+        return self._x_range_dictionary
+
+    @x_range_dictionary.setter
+    def x_range_dictionary(self, value):
+        self._x_range_dictionary = value
+
+    @property
+    def y_range_dictionary(self) -> dict[str, Range1d]:
+        return self._y_range_dictionary
+
+    @y_range_dictionary.setter
+    def y_range_dictionary(self, value):
+        self._y_range_dictionary = value
 
     @staticmethod
     def compose_figure_for_corner_plot_position(figure_: figure, number_of_parameters: int,
@@ -115,3 +163,28 @@ class CornerPlot(Column):
         tools = [PanTool(), WheelZoomTool(), BoxZoomTool(), ResetTool()]
         toolbar = Toolbar(tools=tools)
         figure_.toolbar = toolbar
+
+    def set_ranges_to_data(self) -> None:
+        for parameter_name, range_1d in itertools.chain(self.x_range_dictionary.items(),
+                                                        self.y_range_dictionary.items()):
+            range_start = math.inf
+            range_end = -math.inf
+            for distribution_source in self.distribution_sources:
+                if parameter_name in distribution_source.column_names:
+                    source_start, source_end = get_padded_range_for_array(distribution_source.data[parameter_name])
+                    if source_start < range_start:
+                        range_start = source_start
+                    if source_end > range_end:
+                        range_end = source_end
+            range_1d.start = range_start
+            range_1d.end = range_end
+
+
+def get_padded_range_for_array(array: npt.NDArray, padding_fraction: float = 0.05) -> tuple[float, float]:
+    array_minimum = np.min(array)
+    array_maximum = np.max(array)
+    array_difference = array_maximum - array_minimum
+    padding = padding_fraction * array_difference
+    range_start = array_minimum - padding
+    range_end = array_maximum + padding
+    return range_start, range_end
